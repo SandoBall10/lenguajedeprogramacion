@@ -66,24 +66,22 @@ def show_startup_banner():
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    SISTEMA DE MATRÍCULAS UNIVERSITARIAS                      ║
 ║                                                                              ║
-║  🎓 Proyecto Académico - Teoría de los Lenguajes de Programación            ║
+║  🎓 Proyecto Académico - Lenguajes de Programación                          ║
 ║                                                                              ║
 ║  📋 Características:                                                         ║
-║     • Paradigmas: Orientado a Objetos, Funcional, Lógico                   ║
-║     • Lenguaje: Python 3.x                                                  ║
-║     • Base de Datos: MySQL (XAMPP)                                          ║
-║     • Interfaz: Consola + GUI (tkinter)                                     ║
-║     • Ciencia de Datos: pandas, numpy, matplotlib                           ║
+║     • Paradigmas: Orientado a Objetos, Funcional, Lógico                     ║
+║     • Lenguaje: Python 3.x                                                   ║
+║     • Base de Datos: MySQL (XAMPP)                                           ║
+║     • Interfaz: Consola + GUI (tkinter)                                      ║
+║     • Ciencia de Datos: pandas, numpy, matplotlib                            ║
 ║                                                                              ║
-║  🔧 Funcionalidades:                                                         ║
-║     • Gestión completa de estudiantes, cursos y matrículas                  ║
-║     • Reportes y estadísticas avanzadas                                     ║
-║     • Análisis de datos y visualizaciones                                   ║
-║     • Exportación a CSV y Excel                                             ║
-║     • Comparación de lenguajes de programación                              ║
+║  🔧 Funcionalidades:                                                        ║
+║     • Gestión completa de estudiantes, cursos y matrículas                   ║
+║     • Reportes y estadísticas avanzadas                                      ║
+║     • Análisis de datos y visualizaciones                                    ║
+║     • Exportación a CSV y Excel                                              ║
+║     • Comparación de lenguajes de programación                               ║
 ║                                                                              ║
-║  👨‍💻 Autor: Sistema de Matrículas Universitarias                             ║
-║  📅 Año: 2024                                                               ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
     """
     print(banner)
@@ -96,16 +94,15 @@ def get_execution_mode() -> str:
     print("\n🚀 MODOS DE EJECUCIÓN DISPONIBLES:")
     print("1. Aplicación de Consola (Interfaz de texto)")
     print("2. Interfaz Gráfica (GUI con tkinter)")
-    print("3. Modo Mixto (Consola + opción de GUI)")
     
     while True:
         try:
-            choice = input("\nSeleccione el modo de ejecución (1-3): ").strip()
+            choice = input("\nSeleccione el modo de ejecución (1-2): ").strip()
             
             if choice in ['1', '2', '3']:
                 return choice
             else:
-                print("❌ Opción inválida. Seleccione 1, 2 o 3.")
+                print("❌ Opción inválida. Seleccione 1 o 2.")
                 
         except KeyboardInterrupt:
             print("\n\n👋 Saliendo del programa...")
@@ -209,7 +206,6 @@ def main():
         mode_functions = {
             '1': run_console_mode,
             '2': run_gui_mode,
-            '3': run_mixed_mode
         }
         
         # Programación funcional: usar diccionario como dispatcher
@@ -231,55 +227,8 @@ def main():
     finally:
         print("\n👋 ¡Gracias por usar el Sistema de Matrículas Universitarias!")
 
-def show_help():
-    """
-    Muestra ayuda sobre el uso del programa
-    Información para el usuario
-    """
-    help_text = """
-📖 AYUDA - SISTEMA DE MATRÍCULAS UNIVERSITARIAS
 
-🎯 PROPÓSITO:
-   Sistema académico para gestionar estudiantes, cursos y matrículas universitarias.
-   Desarrollado como proyecto para el curso de Teoría de los Lenguajes de Programación.
 
-🔧 REQUISITOS TÉCNICOS:
-   • Python 3.7 o superior
-   • MySQL Server (XAMPP recomendado)
-   • Librerías: mysql-connector-python, pandas, numpy, matplotlib
-
-📋 FUNCIONALIDADES PRINCIPALES:
-   • Registro y gestión de estudiantes
-   • Administración de cursos académicos
-   • Sistema de matrículas con validaciones
-   • Reportes y estadísticas detalladas
-   • Análisis de datos con pandas/numpy
-   • Interfaz de consola y gráfica (tkinter)
-   • Exportación a CSV y Excel
-
-🎨 PARADIGMAS IMPLEMENTADOS:
-   • Orientado a Objetos: Clases, herencia, encapsulación
-   • Funcional: map(), filter(), lambda, funciones de orden superior
-   • Lógico: Predicados, reglas de negocio, validaciones
-
-🚀 MODOS DE EJECUCIÓN:
-   1. Consola: Interfaz de texto completa
-   2. GUI: Interfaz gráfica con tkinter
-   3. Mixto: Consola con acceso a GUI
-
-📞 SOPORTE:
-   Para problemas técnicos, verifique:
-   • Conexión a MySQL (XAMPP ejecutándose)
-   • Instalación de dependencias Python
-   • Permisos de base de datos
-
-🎓 ASPECTOS ACADÉMICOS:
-   • Demuestra aplicación de múltiples paradigmas
-   • Implementa patrones de diseño (DAO, MVC)
-   • Usa ciencia de datos para análisis
-   • Incluye comparación de lenguajes de programación
-    """
-    print(help_text)
 
 # Funciones auxiliares para el programa principal
 def validate_python_version() -> bool:
@@ -325,7 +274,7 @@ def handle_errors(func):
     return wrapper
 
 # Función lambda para validaciones rápidas
-is_valid_mode = lambda mode: mode in ['1', '2', '3']
+is_valid_mode = lambda mode: mode in ['1', '2']
 is_affirmative = lambda response: response.lower() in ['s', 'si', 'y', 'yes']
 
 if __name__ == "__main__":
