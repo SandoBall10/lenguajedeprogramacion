@@ -1,5 +1,4 @@
 """
-Autor: Sistema de Matrículas Universitarias
 Módulo: Aplicación de Consola
 Descripción: Interfaz de consola para el sistema
 Paradigmas: POO, Funcional, Lógico
@@ -78,14 +77,12 @@ class ConsoleApp:
 ╔══════════════════════════════════════════════════════════════╗
 ║              SISTEMA DE MATRÍCULAS UNIVERSITARIAS            ║
 ║                                                              ║
-║  Autor: Sistema de Matrículas Universitarias                ║
-║  Lenguaje: Python 3.x                                       ║
-║  Paradigmas: POO, Funcional, Lógico                         ║
-║  Base de Datos: MySQL (XAMPP)                               ║
-║  Interfaz: Consola + GUI (tkinter)                          ║
+║  Autor: Sistema de Matrículas Universitarias                 ║
+║  Lenguaje: Python 3.x                                        ║
+║  Paradigmas: POO, Funcional, Lógico                          ║
+║  Base de Datos: MySQL (XAMPP)                                ║
+║  Interfaz: Consola + GUI (tkinter)                           ║
 ║                                                              ║
-║  Curso: Teoría de los Lenguajes de Programación             ║
-║  Año: 2024                                                  ║
 ╚══════════════════════════════════════════════════════════════╝
         """
         
@@ -103,10 +100,7 @@ class ConsoleApp:
             '2': 'Gestión de Cursos', 
             '3': 'Gestión de Matrículas',
             '4': 'Reportes y Estadísticas',
-            '5': 'Análisis de Datos',
-            '6': 'Comparación de Lenguajes',
             '7': 'Interfaz Gráfica',
-            '8': 'Configuración',
             '0': 'Salir'
         }
         
