@@ -17,6 +17,7 @@ from dao.curso_dao import CursoDAO
 from dao.matricula_dao import MatriculaDAO
 from models.estudiante import Estudiante
 from models.curso import Curso
+from config.database import DatabaseConfig
 
 class MainWindow:
     """
@@ -30,6 +31,12 @@ class MainWindow:
         self.root.title("Sistema de Matrículas Universitarias")
         self.root.geometry("1200x800")
         self.root.configure(bg='#f0f0f0')
+        
+        # Inicializar base de datos primero
+        self.db_config = DatabaseConfig()
+        if not self._initialize_database():
+            messagebox.showerror("Error", "No se pudo conectar a la base de datos")
+            return
         
         # Servicios y DAOs
         self.matricula_service = MatriculaService()
@@ -51,6 +58,14 @@ class MainWindow:
         
         # Cargar datos iniciales
         self._load_initial_data()
+    
+    def _initialize_database(self) -> bool:
+        """Inicializa la base de datos y crea las tablas necesarias"""
+        try:
+            return self.db_config.create_database_and_tables()
+        except Exception as e:
+            print(f"Error inicializando base de datos: {e}")
+            return False
     
     def _configure_styles(self):
         """Configura estilos personalizados para la interfaz"""
@@ -330,9 +345,12 @@ class MainWindow:
     
     def _load_initial_data(self):
         """Carga datos iniciales en las pestañas"""
-        self._refresh_students()
-        self._refresh_courses()
-        self._refresh_enrollments()
+        try:
+            self._refresh_students()
+            self._refresh_courses()
+            self._refresh_enrollments()
+        except Exception as e:
+            messagebox.showerror("Error", f"Error cargando datos iniciales: {str(e)}")
     
     def _refresh_students(self):
         """Actualiza la lista de estudiantes"""
@@ -359,6 +377,7 @@ class MainWindow:
             
         except Exception as e:
             messagebox.showerror("Error", f"Error cargando estudiantes: {str(e)}")
+            self.logger.error(f"Error cargando estudiantes: {e}")
     
     def _refresh_courses(self):
         """Actualiza la lista de cursos"""
@@ -386,6 +405,7 @@ class MainWindow:
             
         except Exception as e:
             messagebox.showerror("Error", f"Error cargando cursos: {str(e)}")
+            self.logger.error(f"Error cargando cursos: {e}")
     
     def _refresh_enrollments(self):
         """Actualiza la lista de matrículas"""
@@ -428,6 +448,7 @@ class MainWindow:
             
         except Exception as e:
             messagebox.showerror("Error", f"Error cargando matrículas: {str(e)}")
+            self.logger.error(f"Error cargando matrículas: {e}")
     
     def _update_status(self, message: str):
         """Actualiza la barra de estado"""
@@ -438,18 +459,31 @@ class MainWindow:
         """Ejecuta la aplicación"""
         self.root.mainloop()
 
-    # Métodos de diálogo (continuarán en la siguiente parte)
+    # Métodos de diálogo corregidos
     def _new_student_dialog(self):
         """Diálogo para crear nuevo estudiante"""
-        dialog = StudentDialog(self.root, "Nuevo Estudiante")
-        if dialog.result:
-            try:
+        try:
+            dialog = StudentDialog(self.root, "Nuevo Estudiante")
+            self.root.wait_window(dialog.dialog)  # Esperar a que se cierre el diálogo
+            
+            if dialog.result:
+                # Verificar que el código no exista
+                if self.estudiante_dao.exists_codigo(dialog.result['codigo']):
+                    messagebox.showerror("Error", f"Ya existe un estudiante con código {dialog.result['codigo']}")
+                    return
+                
                 estudiante = Estudiante(**dialog.result)
-                self.estudiante_dao.create(estudiante)
-                self._refresh_students()
-                messagebox.showinfo("Éxito", "Estudiante creado exitosamente")
-            except Exception as e:
-                messagebox.showerror("Error", f"Error creando estudiante: {str(e)}")
+                estudiante_id = self.estudiante_dao.create(estudiante)
+                
+                if estudiante_id:
+                    self._refresh_students()
+                    messagebox.showinfo("Éxito", f"Estudiante creado exitosamente con ID: {estudiante_id}")
+                else:
+                    messagebox.showerror("Error", "No se pudo crear el estudiante")
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Error creando estudiante: {str(e)}")
+            self.logger.error(f"Error creando estudiante: {e}")
     
     def _edit_student_dialog(self):
         """Diálogo para editar estudiante"""
@@ -458,29 +492,35 @@ class MainWindow:
             messagebox.showwarning("Advertencia", "Seleccione un estudiante para editar")
             return
         
-        # Obtener datos del estudiante seleccionado
-        item = self.students_tree.item(selection[0])
-        values = item['values']
-        
-        # Crear diálogo con datos existentes
-        initial_data = {
-            'codigo': values[0],
-            'nombre': values[1],
-            'apellido': values[2],
-            'carrera': values[3],
-            'email': values[4],
-            'telefono': values[5]
-        }
-        
-        dialog = StudentDialog(self.root, "Editar Estudiante", initial_data)
-        if dialog.result:
-            try:
+        try:
+            # Obtener datos del estudiante seleccionado
+            item = self.students_tree.item(selection[0])
+            values = item['values']
+            
+            # Crear diálogo con datos existentes
+            initial_data = {
+                'codigo': values[0],
+                'nombre': values[1],
+                'apellido': values[2],
+                'carrera': values[3],
+                'email': values[4],
+                'telefono': values[5]
+            }
+            
+            dialog = StudentDialog(self.root, "Editar Estudiante", initial_data)
+            self.root.wait_window(dialog.dialog)
+            
+            if dialog.result:
                 estudiante = Estudiante(**dialog.result)
-                self.estudiante_dao.update(estudiante)
-                self._refresh_students()
-                messagebox.showinfo("Éxito", "Estudiante actualizado exitosamente")
-            except Exception as e:
-                messagebox.showerror("Error", f"Error actualizando estudiante: {str(e)}")
+                if self.estudiante_dao.update(estudiante):
+                    self._refresh_students()
+                    messagebox.showinfo("Éxito", "Estudiante actualizado exitosamente")
+                else:
+                    messagebox.showerror("Error", "No se pudo actualizar el estudiante")
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Error actualizando estudiante: {str(e)}")
+            self.logger.error(f"Error actualizando estudiante: {e}")
     
     def _delete_student(self):
         """Elimina un estudiante"""
@@ -489,17 +529,21 @@ class MainWindow:
             messagebox.showwarning("Advertencia", "Seleccione un estudiante para eliminar")
             return
         
-        item = self.students_tree.item(selection[0])
-        codigo = item['values'][0]
-        nombre = f"{item['values'][1]} {item['values'][2]}"
-        
-        if messagebox.askyesno("Confirmar", f"¿Está seguro de eliminar al estudiante {nombre}?"):
-            try:
-                self.estudiante_dao.delete_by_codigo(codigo)
-                self._refresh_students()
-                messagebox.showinfo("Éxito", "Estudiante eliminado exitosamente")
-            except Exception as e:
-                messagebox.showerror("Error", f"Error eliminando estudiante: {str(e)}")
+        try:
+            item = self.students_tree.item(selection[0])
+            codigo = item['values'][0]
+            nombre = f"{item['values'][1]} {item['values'][2]}"
+            
+            if messagebox.askyesno("Confirmar", f"¿Está seguro de eliminar al estudiante {nombre}?"):
+                if self.estudiante_dao.delete_by_codigo(codigo):
+                    self._refresh_students()
+                    messagebox.showinfo("Éxito", "Estudiante eliminado exitosamente")
+                else:
+                    messagebox.showerror("Error", "No se pudo eliminar el estudiante")
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Error eliminando estudiante: {str(e)}")
+            self.logger.error(f"Error eliminando estudiante: {e}")
     
     def _search_students(self, event=None):
         """Busca estudiantes por nombre"""
@@ -529,18 +573,32 @@ class MainWindow:
             
         except Exception as e:
             messagebox.showerror("Error", f"Error en búsqueda: {str(e)}")
+            self.logger.error(f"Error en búsqueda: {e}")
     
     def _new_course_dialog(self):
         """Diálogo para crear nuevo curso"""
-        dialog = CourseDialog(self.root, "Nuevo Curso")
-        if dialog.result:
-            try:
+        try:
+            dialog = CourseDialog(self.root, "Nuevo Curso")
+            self.root.wait_window(dialog.dialog)
+            
+            if dialog.result:
+                # Verificar que el código no exista
+                if self.curso_dao.exists_codigo(dialog.result['codigo']):
+                    messagebox.showerror("Error", f"Ya existe un curso con código {dialog.result['codigo']}")
+                    return
+                
                 curso = Curso(**dialog.result)
-                self.curso_dao.create(curso)
-                self._refresh_courses()
-                messagebox.showinfo("Éxito", "Curso creado exitosamente")
-            except Exception as e:
-                messagebox.showerror("Error", f"Error creando curso: {str(e)}")
+                curso_id = self.curso_dao.create(curso)
+                
+                if curso_id:
+                    self._refresh_courses()
+                    messagebox.showinfo("Éxito", f"Curso creado exitosamente con ID: {curso_id}")
+                else:
+                    messagebox.showerror("Error", "No se pudo crear el curso")
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Error creando curso: {str(e)}")
+            self.logger.error(f"Error creando curso: {e}")
     
     def _edit_course_dialog(self):
         """Diálogo para editar curso"""
@@ -549,27 +607,33 @@ class MainWindow:
             messagebox.showwarning("Advertencia", "Seleccione un curso para editar")
             return
         
-        item = self.courses_tree.item(selection[0])
-        values = item['values']
-        
-        initial_data = {
-            'codigo': values[0],
-            'nombre': values[1],
-            'creditos': int(values[2]),
-            'profesor': values[3],
-            'horario': values[4],
-            'cupos_disponibles': int(values[5]) + int(values[6])  # Total de cupos
-        }
-        
-        dialog = CourseDialog(self.root, "Editar Curso", initial_data)
-        if dialog.result:
-            try:
+        try:
+            item = self.courses_tree.item(selection[0])
+            values = item['values']
+            
+            initial_data = {
+                'codigo': values[0],
+                'nombre': values[1],
+                'creditos': int(values[2]),
+                'profesor': values[3],
+                'horario': values[4],
+                'cupos_disponibles': int(values[5]) + int(values[6])  # Total de cupos
+            }
+            
+            dialog = CourseDialog(self.root, "Editar Curso", initial_data)
+            self.root.wait_window(dialog.dialog)
+            
+            if dialog.result:
                 curso = Curso(**dialog.result)
-                self.curso_dao.update(curso)
-                self._refresh_courses()
-                messagebox.showinfo("Éxito", "Curso actualizado exitosamente")
-            except Exception as e:
-                messagebox.showerror("Error", f"Error actualizando curso: {str(e)}")
+                if self.curso_dao.update(curso):
+                    self._refresh_courses()
+                    messagebox.showinfo("Éxito", "Curso actualizado exitosamente")
+                else:
+                    messagebox.showerror("Error", "No se pudo actualizar el curso")
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Error actualizando curso: {str(e)}")
+            self.logger.error(f"Error actualizando curso: {e}")
     
     def _delete_course(self):
         """Elimina un curso"""
@@ -578,23 +642,29 @@ class MainWindow:
             messagebox.showwarning("Advertencia", "Seleccione un curso para eliminar")
             return
         
-        item = self.courses_tree.item(selection[0])
-        codigo = item['values'][0]
-        nombre = item['values'][1]
-        
-        if messagebox.askyesno("Confirmar", f"¿Está seguro de eliminar el curso {nombre}?"):
-            try:
-                self.curso_dao.delete_by_codigo(codigo)
-                self._refresh_courses()
-                messagebox.showinfo("Éxito", "Curso eliminado exitosamente")
-            except Exception as e:
-                messagebox.showerror("Error", f"Error eliminando curso: {str(e)}")
+        try:
+            item = self.courses_tree.item(selection[0])
+            codigo = item['values'][0]
+            nombre = item['values'][1]
+            
+            if messagebox.askyesno("Confirmar", f"¿Está seguro de eliminar el curso {nombre}?"):
+                if self.curso_dao.delete_by_codigo(codigo):
+                    self._refresh_courses()
+                    messagebox.showinfo("Éxito", "Curso eliminado exitosamente")
+                else:
+                    messagebox.showerror("Error", "No se pudo eliminar el curso")
+                    
+        except Exception as e:
+            messagebox.showerror("Error", f"Error eliminando curso: {str(e)}")
+            self.logger.error(f"Error eliminando curso: {e}")
     
     def _new_enrollment_dialog(self):
         """Diálogo para crear nueva matrícula"""
-        dialog = EnrollmentDialog(self.root, self.estudiante_dao, self.curso_dao)
-        if dialog.result:
-            try:
+        try:
+            dialog = EnrollmentDialog(self.root, self.estudiante_dao, self.curso_dao)
+            self.root.wait_window(dialog.dialog)
+            
+            if dialog.result:
                 estudiante_codigo = dialog.result['estudiante_codigo']
                 curso_codigo = dialog.result['curso_codigo']
                 
@@ -607,8 +677,9 @@ class MainWindow:
                 else:
                     messagebox.showerror("Error", message)
                     
-            except Exception as e:
-                messagebox.showerror("Error", f"Error en matrícula: {str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error en matrícula: {str(e)}")
+            self.logger.error(f"Error en matrícula: {e}")
     
     def _cancel_enrollment(self):
         """Cancela una matrícula"""
@@ -617,23 +688,23 @@ class MainWindow:
             messagebox.showwarning("Advertencia", "Seleccione una matrícula para cancelar")
             return
         
-        item = self.enrollments_tree.item(selection[0])
-        values = item['values']
-        
-        if values[4] != 'ACTIVA':
-            messagebox.showwarning("Advertencia", "Solo se pueden cancelar matrículas activas")
-            return
-        
-        # Extraer códigos de estudiante y curso
-        estudiante_info = values[1]
-        curso_info = values[2]
-        
-        # Obtener códigos (están entre paréntesis)
-        estudiante_codigo = estudiante_info.split('(')[1].split(')')[0]
-        curso_codigo = curso_info.split('(')[1].split(')')[0]
-        
-        if messagebox.askyesno("Confirmar", f"¿Está seguro de cancelar esta matrícula?"):
-            try:
+        try:
+            item = self.enrollments_tree.item(selection[0])
+            values = item['values']
+            
+            if values[4] != 'ACTIVA':
+                messagebox.showwarning("Advertencia", "Solo se pueden cancelar matrículas activas")
+                return
+            
+            # Extraer códigos de estudiante y curso
+            estudiante_info = values[1]
+            curso_info = values[2]
+            
+            # Obtener códigos (están entre paréntesis)
+            estudiante_codigo = estudiante_info.split('(')[1].split(')')[0]
+            curso_codigo = curso_info.split('(')[1].split(')')[0]
+            
+            if messagebox.askyesno("Confirmar", f"¿Está seguro de cancelar esta matrícula?"):
                 success, message = self.matricula_service.cancelar_matricula(estudiante_codigo, curso_codigo)
                 
                 if success:
@@ -643,8 +714,9 @@ class MainWindow:
                 else:
                     messagebox.showerror("Error", message)
                     
-            except Exception as e:
-                messagebox.showerror("Error", f"Error cancelando matrícula: {str(e)}")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error cancelando matrícula: {str(e)}")
+            self.logger.error(f"Error cancelando matrícula: {e}")
     
     def _filter_enrollments(self, event=None):
         """Filtra matrículas según selección"""
@@ -698,6 +770,7 @@ class MainWindow:
             
         except Exception as e:
             messagebox.showerror("Error", f"Error generando reporte: {str(e)}")
+            self.logger.error(f"Error generando reporte: {e}")
     
     def _export_to_csv(self):
         """Exporta datos a CSV"""
@@ -735,6 +808,7 @@ class MainWindow:
                 
         except Exception as e:
             messagebox.showerror("Error", f"Error exportando a CSV: {str(e)}")
+            self.logger.error(f"Error exportando a CSV: {e}")
     
     def _show_statistics(self):
         """Muestra estadísticas detalladas"""
@@ -776,8 +850,9 @@ class MainWindow:
             
         except Exception as e:
             messagebox.showerror("Error", f"Error mostrando estadísticas: {str(e)}")
+            self.logger.error(f"Error mostrando estadísticas: {e}")
 
-# Clases de diálogo auxiliares
+# Clases de diálogo corregidas
 class StudentDialog:
     """Diálogo para crear/editar estudiantes"""
     
@@ -787,7 +862,7 @@ class StudentDialog:
         # Crear ventana
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(title)
-        self.dialog.geometry("400x300")
+        self.dialog.geometry("400x350")
         self.dialog.configure(bg='#f0f0f0')
         self.dialog.transient(parent)
         self.dialog.grab_set()
@@ -803,6 +878,13 @@ class StudentDialog:
         self._create_widgets()
         
         # Centrar ventana
+        self._center_window()
+        
+        # Enfocar primer campo
+        self.codigo_entry.focus_set()
+    
+    def _center_window(self):
+        """Centra la ventana en la pantalla"""
         self.dialog.update_idletasks()
         x = (self.dialog.winfo_screenwidth() // 2) - (self.dialog.winfo_width() // 2)
         y = (self.dialog.winfo_screenheight() // 2) - (self.dialog.winfo_height() // 2)
@@ -815,58 +897,101 @@ class StudentDialog:
         main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
         # Campos del formulario
-        fields = [
-            ("Código:", self.codigo_var),
-            ("Nombre:", self.nombre_var),
-            ("Apellido:", self.apellido_var),
-            ("Carrera:", self.carrera_var),
-            ("Email:", self.email_var),
-            ("Teléfono:", self.telefono_var)
-        ]
+        row = 0
         
-        for i, (label, var) in enumerate(fields):
-            ttk.Label(main_frame, text=label).grid(row=i, column=0, sticky='w', pady=5)
-            
-            if label == "Carrera:":
-                # Combobox para carrera
-                carrera_combo = ttk.Combobox(
-                    main_frame, 
-                    textvariable=var,
-                    values=[
-                        'INGENIERIA DE SISTEMAS', 'INGENIERIA INDUSTRIAL',
-                        'ADMINISTRACION', 'CONTADURIA', 'DERECHO',
-                        'MEDICINA', 'PSICOLOGIA', 'ARQUITECTURA'
-                    ]
-                )
-                carrera_combo.grid(row=i, column=1, sticky='ew', padx=(10, 0), pady=5)
-            else:
-                ttk.Entry(main_frame, textvariable=var).grid(row=i, column=1, sticky='ew', padx=(10, 0), pady=5)
+        # Código
+        ttk.Label(main_frame, text="Código:*").grid(row=row, column=0, sticky='w', pady=5)
+        self.codigo_entry = ttk.Entry(main_frame, textvariable=self.codigo_var)
+        self.codigo_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        row += 1
+        
+        # Nombre
+        ttk.Label(main_frame, text="Nombre:*").grid(row=row, column=0, sticky='w', pady=5)
+        self.nombre_entry = ttk.Entry(main_frame, textvariable=self.nombre_var)
+        self.nombre_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        row += 1
+        
+        # Apellido
+        ttk.Label(main_frame, text="Apellido:*").grid(row=row, column=0, sticky='w', pady=5)
+        self.apellido_entry = ttk.Entry(main_frame, textvariable=self.apellido_var)
+        self.apellido_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        row += 1
+        
+        # Carrera
+        ttk.Label(main_frame, text="Carrera:*").grid(row=row, column=0, sticky='w', pady=5)
+        self.carrera_combo = ttk.Combobox(
+            main_frame, 
+            textvariable=self.carrera_var,
+            values=[
+                'INGENIERIA DE SISTEMAS', 'INGENIERIA INDUSTRIAL',
+                'ADMINISTRACION', 'CONTADURIA', 'DERECHO',
+                'MEDICINA', 'PSICOLOGIA', 'ARQUITECTURA'
+            ],
+            state='readonly'
+        )
+        self.carrera_combo.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        row += 1
+        
+        # Email
+        ttk.Label(main_frame, text="Email:").grid(row=row, column=0, sticky='w', pady=5)
+        self.email_entry = ttk.Entry(main_frame, textvariable=self.email_var)
+        self.email_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        row += 1
+        
+        # Teléfono
+        ttk.Label(main_frame, text="Teléfono:").grid(row=row, column=0, sticky='w', pady=5)
+        self.telefono_entry = ttk.Entry(main_frame, textvariable=self.telefono_var)
+        self.telefono_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        row += 1
+        
+        # Nota de campos obligatorios
+        ttk.Label(main_frame, text="* Campos obligatorios", font=('Arial', 8)).grid(
+            row=row, column=0, columnspan=2, pady=5
+        )
+        row += 1
         
         # Configurar columnas
         main_frame.columnconfigure(1, weight=1)
         
         # Frame para botones
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=len(fields), column=0, columnspan=2, pady=20)
+        button_frame.grid(row=row, column=0, columnspan=2, pady=20)
         
-        ttk.Button(button_frame, text="Aceptar", command=self._accept).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Guardar", command=self._accept).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Cancelar", command=self._cancel).pack(side='left', padx=5)
+        
+        # Bind Enter key
+        self.dialog.bind('<Return>', lambda e: self._accept())
+        self.dialog.bind('<Escape>', lambda e: self._cancel())
     
     def _accept(self):
         """Acepta el diálogo y valida datos"""
         try:
             # Validar campos requeridos
-            if not all([self.codigo_var.get(), self.nombre_var.get(), 
-                       self.apellido_var.get(), self.carrera_var.get()]):
-                messagebox.showerror("Error", "Todos los campos marcados son obligatorios")
+            codigo = self.codigo_var.get().strip()
+            nombre = self.nombre_var.get().strip()
+            apellido = self.apellido_var.get().strip()
+            carrera = self.carrera_var.get().strip()
+            
+            if not all([codigo, nombre, apellido, carrera]):
+                messagebox.showerror("Error", "Todos los campos marcados con * son obligatorios")
                 return
             
+            # Validar email si se proporciona
+            email = self.email_var.get().strip()
+            if email:
+                import re
+                patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                if not re.match(patron, email):
+                    messagebox.showerror("Error", "Formato de email inválido")
+                    return
+            
             self.result = {
-                'codigo': self.codigo_var.get().strip(),
-                'nombre': self.nombre_var.get().strip(),
-                'apellido': self.apellido_var.get().strip(),
-                'carrera': self.carrera_var.get().strip(),
-                'email': self.email_var.get().strip(),
+                'codigo': codigo.upper(),
+                'nombre': nombre.title(),
+                'apellido': apellido.title(),
+                'carrera': carrera.upper(),
+                'email': email.lower(),
                 'telefono': self.telefono_var.get().strip()
             }
             
@@ -888,7 +1013,7 @@ class CourseDialog:
         # Crear ventana
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(title)
-        self.dialog.geometry("400x350")
+        self.dialog.geometry("400x400")
         self.dialog.configure(bg='#f0f0f0')
         self.dialog.transient(parent)
         self.dialog.grab_set()
@@ -902,8 +1027,13 @@ class CourseDialog:
         self.cupos_var = tk.IntVar(value=initial_data.get('cupos_disponibles', 30) if initial_data else 30)
         
         self._create_widgets()
+        self._center_window()
         
-        # Centrar ventana
+        # Enfocar primer campo
+        self.codigo_entry.focus_set()
+    
+    def _center_window(self):
+        """Centra la ventana en la pantalla"""
         self.dialog.update_idletasks()
         x = (self.dialog.winfo_screenwidth() // 2) - (self.dialog.winfo_width() // 2)
         y = (self.dialog.winfo_screenheight() // 2) - (self.dialog.winfo_height() // 2)
@@ -915,39 +1045,70 @@ class CourseDialog:
         main_frame = ttk.Frame(self.dialog)
         main_frame.pack(fill='both', expand=True, padx=20, pady=20)
         
-        # Campos del formulario
         row = 0
         
         # Código
-        ttk.Label(main_frame, text="Código:").grid(row=row, column=0, sticky='w', pady=5)
-        ttk.Entry(main_frame, textvariable=self.codigo_var).grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        ttk.Label(main_frame, text="Código:*").grid(row=row, column=0, sticky='w', pady=5)
+        self.codigo_entry = ttk.Entry(main_frame, textvariable=self.codigo_var)
+        self.codigo_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
         row += 1
         
         # Nombre
-        ttk.Label(main_frame, text="Nombre:").grid(row=row, column=0, sticky='w', pady=5)
-        ttk.Entry(main_frame, textvariable=self.nombre_var).grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        ttk.Label(main_frame, text="Nombre:*").grid(row=row, column=0, sticky='w', pady=5)
+        self.nombre_entry = ttk.Entry(main_frame, textvariable=self.nombre_var)
+        self.nombre_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
         row += 1
         
         # Créditos
-        ttk.Label(main_frame, text="Créditos:").grid(row=row, column=0, sticky='w', pady=5)
-        creditos_spin = ttk.Spinbox(main_frame, from_=1, to=6, textvariable=self.creditos_var, width=10)
-        creditos_spin.grid(row=row, column=1, sticky='w', padx=(10, 0), pady=5)
+        ttk.Label(main_frame, text="Créditos:*").grid(row=row, column=0, sticky='w', pady=5)
+        creditos_frame = ttk.Frame(main_frame)
+        creditos_frame.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        
+        self.creditos_spin = ttk.Spinbox(
+            creditos_frame, 
+            from_=1, 
+            to=6, 
+            textvariable=self.creditos_var, 
+            width=10,
+            state='readonly'
+        )
+        self.creditos_spin.pack(side='left')
+        ttk.Label(creditos_frame, text="(1-6 créditos)").pack(side='left', padx=(10, 0))
         row += 1
         
         # Profesor
         ttk.Label(main_frame, text="Profesor:").grid(row=row, column=0, sticky='w', pady=5)
-        ttk.Entry(main_frame, textvariable=self.profesor_var).grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        self.profesor_entry = ttk.Entry(main_frame, textvariable=self.profesor_var)
+        self.profesor_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
         row += 1
         
         # Horario
         ttk.Label(main_frame, text="Horario:").grid(row=row, column=0, sticky='w', pady=5)
-        ttk.Entry(main_frame, textvariable=self.horario_var).grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        self.horario_entry = ttk.Entry(main_frame, textvariable=self.horario_var)
+        self.horario_entry.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
         row += 1
         
         # Cupos
-        ttk.Label(main_frame, text="Cupos:").grid(row=row, column=0, sticky='w', pady=5)
-        cupos_spin = ttk.Spinbox(main_frame, from_=10, to=100, textvariable=self.cupos_var, width=10)
-        cupos_spin.grid(row=row, column=1, sticky='w', padx=(10, 0), pady=5)
+        ttk.Label(main_frame, text="Cupos:*").grid(row=row, column=0, sticky='w', pady=5)
+        cupos_frame = ttk.Frame(main_frame)
+        cupos_frame.grid(row=row, column=1, sticky='ew', padx=(10, 0), pady=5)
+        
+        self.cupos_spin = ttk.Spinbox(
+            cupos_frame, 
+            from_=10, 
+            to=100, 
+            textvariable=self.cupos_var, 
+            width=10,
+            state='readonly'
+        )
+        self.cupos_spin.pack(side='left')
+        ttk.Label(cupos_frame, text="(10-100 cupos)").pack(side='left', padx=(10, 0))
+        row += 1
+        
+        # Nota de campos obligatorios
+        ttk.Label(main_frame, text="* Campos obligatorios", font=('Arial', 8)).grid(
+            row=row, column=0, columnspan=2, pady=5
+        )
         row += 1
         
         # Configurar columnas
@@ -957,24 +1118,43 @@ class CourseDialog:
         button_frame = ttk.Frame(main_frame)
         button_frame.grid(row=row, column=0, columnspan=2, pady=20)
         
-        ttk.Button(button_frame, text="Aceptar", command=self._accept).pack(side='left', padx=5)
+        ttk.Button(button_frame, text="Guardar", command=self._accept).pack(side='left', padx=5)
         ttk.Button(button_frame, text="Cancelar", command=self._cancel).pack(side='left', padx=5)
+        
+        # Bind keys
+        self.dialog.bind('<Return>', lambda e: self._accept())
+        self.dialog.bind('<Escape>', lambda e: self._cancel())
     
     def _accept(self):
         """Acepta el diálogo y valida datos"""
         try:
             # Validar campos requeridos
-            if not all([self.codigo_var.get(), self.nombre_var.get()]):
+            codigo = self.codigo_var.get().strip()
+            nombre = self.nombre_var.get().strip()
+            
+            if not all([codigo, nombre]):
                 messagebox.showerror("Error", "Código y nombre son obligatorios")
                 return
             
+            # Validar valores numéricos
+            creditos = self.creditos_var.get()
+            cupos = self.cupos_var.get()
+            
+            if not (1 <= creditos <= 6):
+                messagebox.showerror("Error", "Los créditos deben estar entre 1 y 6")
+                return
+            
+            if not (10 <= cupos <= 100):
+                messagebox.showerror("Error", "Los cupos deben estar entre 10 y 100")
+                return
+            
             self.result = {
-                'codigo': self.codigo_var.get().strip(),
-                'nombre': self.nombre_var.get().strip(),
-                'creditos': self.creditos_var.get(),
+                'codigo': codigo.upper(),
+                'nombre': nombre.title(),
+                'creditos': creditos,
                 'profesor': self.profesor_var.get().strip(),
                 'horario': self.horario_var.get().strip(),
-                'cupos_disponibles': self.cupos_var.get()
+                'cupos_disponibles': cupos
             }
             
             self.dialog.destroy()
@@ -997,7 +1177,7 @@ class EnrollmentDialog:
         # Crear ventana
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Nueva Matrícula")
-        self.dialog.geometry("500x300")
+        self.dialog.geometry("600x400")
         self.dialog.configure(bg='#f0f0f0')
         self.dialog.transient(parent)
         self.dialog.grab_set()
@@ -1008,8 +1188,10 @@ class EnrollmentDialog:
         
         self._create_widgets()
         self._load_data()
-        
-        # Centrar ventana
+        self._center_window()
+    
+    def _center_window(self):
+        """Centra la ventana en la pantalla"""
         self.dialog.update_idletasks()
         x = (self.dialog.winfo_screenwidth() // 2) - (self.dialog.winfo_width() // 2)
         y = (self.dialog.winfo_screenheight() // 2) - (self.dialog.winfo_height() // 2)
@@ -1023,20 +1205,25 @@ class EnrollmentDialog:
         
         # Selección de estudiante
         ttk.Label(main_frame, text="Estudiante:", font=('Arial', 10, 'bold')).grid(row=0, column=0, sticky='w', pady=5)
-        self.estudiante_combo = ttk.Combobox(main_frame, textvariable=self.estudiante_var, width=50)
+        self.estudiante_combo = ttk.Combobox(main_frame, textvariable=self.estudiante_var, width=60, state='readonly')
         self.estudiante_combo.grid(row=1, column=0, columnspan=2, sticky='ew', pady=5)
         
         # Selección de curso
         ttk.Label(main_frame, text="Curso:", font=('Arial', 10, 'bold')).grid(row=2, column=0, sticky='w', pady=(15, 5))
-        self.curso_combo = ttk.Combobox(main_frame, textvariable=self.curso_var, width=50)
+        self.curso_combo = ttk.Combobox(main_frame, textvariable=self.curso_var, width=60, state='readonly')
         self.curso_combo.grid(row=3, column=0, columnspan=2, sticky='ew', pady=5)
         
         # Información adicional
         info_frame = ttk.LabelFrame(main_frame, text="Información", padding=10)
         info_frame.grid(row=4, column=0, columnspan=2, sticky='ew', pady=15)
         
-        self.info_label = ttk.Label(info_frame, text="Seleccione un estudiante y un curso para ver información adicional.")
-        self.info_label.pack()
+        self.info_label = ttk.Label(
+            info_frame, 
+            text="Seleccione un estudiante y un curso para ver información adicional.",
+            wraplength=500,
+            justify='left'
+        )
+        self.info_label.pack(fill='both', expand=True)
         
         # Configurar columnas
         main_frame.columnconfigure(0, weight=1)
@@ -1051,19 +1238,29 @@ class EnrollmentDialog:
         # Bind eventos
         self.estudiante_combo.bind('<<ComboboxSelected>>', self._update_info)
         self.curso_combo.bind('<<ComboboxSelected>>', self._update_info)
+        
+        # Bind keys
+        self.dialog.bind('<Return>', lambda e: self._accept())
+        self.dialog.bind('<Escape>', lambda e: self._cancel())
     
     def _load_data(self):
         """Carga datos de estudiantes y cursos"""
         try:
             # Cargar estudiantes
             estudiantes = self.estudiante_dao.find_all()
-            estudiante_values = [f"{e.codigo} - {e.nombre} {e.apellido}" for e in estudiantes]
+            estudiante_values = [f"{e.codigo} - {e.nombre} {e.apellido} ({e.carrera})" for e in estudiantes]
             self.estudiante_combo['values'] = estudiante_values
             
             # Cargar cursos con cupos disponibles
             cursos = self.curso_dao.find_with_available_spots()
-            curso_values = [f"{c.codigo} - {c.nombre} (Cupos: {c.cupos_disponibles})" for c in cursos]
+            curso_values = [f"{c.codigo} - {c.nombre} (Créditos: {c.creditos}, Cupos: {c.cupos_disponibles})" for c in cursos]
             self.curso_combo['values'] = curso_values
+            
+            if not estudiante_values:
+                messagebox.showwarning("Advertencia", "No hay estudiantes registrados")
+            
+            if not curso_values:
+                messagebox.showwarning("Advertencia", "No hay cursos con cupos disponibles")
             
         except Exception as e:
             messagebox.showerror("Error", f"Error cargando datos: {str(e)}")
@@ -1080,17 +1277,23 @@ class EnrollmentDialog:
                 codigo_estudiante = estudiante_sel.split(' - ')[0]
                 estudiante = self.estudiante_dao.find_by_codigo(codigo_estudiante)
                 if estudiante:
-                    info_text += f"Estudiante: {estudiante.nombre} {estudiante.apellido}\n"
-                    info_text += f"Carrera: {estudiante.carrera}\n"
+                    info_text += f"ESTUDIANTE:\n"
+                    info_text += f"• Nombre: {estudiante.nombre} {estudiante.apellido}\n"
+                    info_text += f"• Código: {estudiante.codigo}\n"
+                    info_text += f"• Carrera: {estudiante.carrera}\n"
+                    info_text += f"• Email: {estudiante.email}\n\n"
             
             if curso_sel:
                 codigo_curso = curso_sel.split(' - ')[0]
                 curso = self.curso_dao.find_by_codigo(codigo_curso)
                 if curso:
-                    info_text += f"Curso: {curso.nombre}\n"
-                    info_text += f"Créditos: {curso.creditos}\n"
-                    info_text += f"Profesor: {curso.profesor}\n"
-                    info_text += f"Cupos disponibles: {curso.cupos_disponibles}\n"
+                    info_text += f"CURSO:\n"
+                    info_text += f"• Nombre: {curso.nombre}\n"
+                    info_text += f"• Código: {curso.codigo}\n"
+                    info_text += f"• Créditos: {curso.creditos}\n"
+                    info_text += f"• Profesor: {curso.profesor or 'No asignado'}\n"
+                    info_text += f"• Horario: {curso.horario or 'No definido'}\n"
+                    info_text += f"• Cupos disponibles: {curso.cupos_disponibles}\n"
             
             if not info_text:
                 info_text = "Seleccione un estudiante y un curso para ver información adicional."
@@ -1111,12 +1314,26 @@ class EnrollmentDialog:
             estudiante_codigo = self.estudiante_var.get().split(' - ')[0]
             curso_codigo = self.curso_var.get().split(' - ')[0]
             
-            self.result = {
-                'estudiante_codigo': estudiante_codigo,
-                'curso_codigo': curso_codigo
-            }
+            # Confirmar matrícula
+            estudiante = self.estudiante_dao.find_by_codigo(estudiante_codigo)
+            curso = self.curso_dao.find_by_codigo(curso_codigo)
             
-            self.dialog.destroy()
+            if not estudiante or not curso:
+                messagebox.showerror("Error", "Error obteniendo datos del estudiante o curso")
+                return
+            
+            confirm_msg = f"¿Confirmar matrícula?\n\n"
+            confirm_msg += f"Estudiante: {estudiante.nombre} {estudiante.apellido}\n"
+            confirm_msg += f"Curso: {curso.nombre}\n"
+            confirm_msg += f"Créditos: {curso.creditos}"
+            
+            if messagebox.askyesno("Confirmar Matrícula", confirm_msg):
+                self.result = {
+                    'estudiante_codigo': estudiante_codigo,
+                    'curso_codigo': curso_codigo
+                }
+                
+                self.dialog.destroy()
             
         except Exception as e:
             messagebox.showerror("Error", f"Error procesando datos: {str(e)}")
