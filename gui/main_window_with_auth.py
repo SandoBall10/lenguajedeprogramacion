@@ -51,6 +51,11 @@ class LoginWindow:
         y = (self.root.winfo_screenheight() // 2) - (height // 2)
         self.root.geometry(f'{width}x{height}+{x}+{y}')
         
+        # Hacer que la ventana sea modal
+        self.root.transient(self.parent)
+        self.root.grab_set()
+        self.root.focus_set()
+        
     def setup_services(self):
         """Configura los servicios necesarios"""
         try:
@@ -222,6 +227,9 @@ class MainWindowWithAuth:
         # Usuario logueado
         self.usuario_logueado = None
         
+        # Control de ventanas modales
+        self.current_modal_window = None
+        
         # Configurar logging
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger(__name__)
@@ -235,6 +243,38 @@ class MainWindowWithAuth:
             self.db_config = DatabaseConfig()
         except Exception as e:
             messagebox.showerror("Error", f"Error configurando servicios: {str(e)}")
+    
+    def open_modal_window(self, window):
+        """Controla que solo una ventana modal esté abierta a la vez"""
+        # Cerrar la ventana modal anterior si existe
+        if self.current_modal_window and self.current_modal_window.winfo_exists():
+            self.current_modal_window.destroy()
+        
+        # Guardar referencia de la nueva ventana
+        self.current_modal_window = window
+        
+        # Configurar evento para limpiar referencia cuando se cierre
+        def on_window_close():
+            if self.current_modal_window == window:
+                self.current_modal_window = None
+            window.destroy()
+        
+        window.protocol("WM_DELETE_WINDOW", on_window_close)
+        
+        # Hacer la ventana modal
+        window.transient(self.root)
+        window.grab_set()
+        window.focus_set()
+        
+        # Centrar ventana
+        window.update_idletasks()
+        width = window.winfo_width()
+        height = window.winfo_height()
+        x = (window.winfo_screenwidth() // 2) - (width // 2)
+        y = (window.winfo_screenheight() // 2) - (height // 2)
+        window.geometry(f'{width}x{height}+{x}+{y}')
+        
+        return window
             
     def authenticate(self) -> bool:
         """Muestra ventana de login y autentica usuario"""
@@ -622,6 +662,9 @@ class MainWindowWithAuth:
             enroll_window.title("Matricularme en Curso")
             enroll_window.geometry("600x400")
             
+            # Aplicar control de ventanas modales
+            self.open_modal_window(enroll_window)
+            
             ttk.Label(enroll_window, text="Seleccione un curso para matricularse:", 
                      font=("Arial", 12, "bold")).pack(pady=10)
             
@@ -677,12 +720,18 @@ class MainWindowWithAuth:
                         connection.commit()
                         
                         messagebox.showinfo("Éxito", f"¡Te has matriculado exitosamente en {curso_nombre}!")
+                        self.current_modal_window = None
                         enroll_window.destroy()
                         
                 except Exception as e:
                     messagebox.showerror("Error", f"Error al matricularse: {str(e)}")
             
-            ttk.Button(enroll_window, text="Matricularme", command=matricular).pack(pady=20)
+            # Frame para botones
+            btn_frame = ttk.Frame(enroll_window)
+            btn_frame.pack(pady=20)
+            
+            ttk.Button(btn_frame, text="Matricularme", command=matricular).pack(side=tk.LEFT, padx=5)
+            ttk.Button(btn_frame, text="Cancelar", command=lambda: (setattr(self, 'current_modal_window', None), enroll_window.destroy())).pack(side=tk.LEFT, padx=5)
             
             cursor.close()
             connection.close()
@@ -709,6 +758,9 @@ class MainWindowWithAuth:
             add_window = tk.Toplevel(self.root)
             add_window.title("Agregar Estudiante")
             add_window.geometry("400x300")
+            
+            # Aplicar control de ventanas modales
+            self.open_modal_window(add_window)
             
             # Campos
             ttk.Label(add_window, text="Código:").grid(row=0, column=0, padx=10, pady=5, sticky=tk.W)
@@ -742,11 +794,18 @@ class MainWindowWithAuth:
                     cursor.close()
                     connection.close()
                     messagebox.showinfo("Éxito", "Estudiante agregado correctamente")
+                    self.current_modal_window = None
                     add_window.destroy()
+                    self.list_students()  # Refrescar lista
                 except Exception as e:
                     messagebox.showerror("Error", f"Error al agregar estudiante: {str(e)}")
             
-            ttk.Button(add_window, text="Guardar", command=save_student).grid(row=5, column=0, columnspan=2, pady=20)
+            # Frame para botones
+            btn_frame = ttk.Frame(add_window)
+            btn_frame.grid(row=5, column=0, columnspan=2, pady=20)
+            
+            ttk.Button(btn_frame, text="Guardar", command=save_student).pack(side=tk.LEFT, padx=5)
+            ttk.Button(btn_frame, text="Cancelar", command=lambda: (setattr(self, 'current_modal_window', None), add_window.destroy())).pack(side=tk.LEFT, padx=5)
             
         except Exception as e:
             messagebox.showerror("Error", f"Error: {str(e)}")
@@ -800,6 +859,9 @@ class MainWindowWithAuth:
             add_window.title("Agregar Curso")
             add_window.geometry("400x250")
             
+            # Aplicar control de ventanas modales
+            self.open_modal_window(add_window)
+            
             # Campos
             ttk.Label(add_window, text="Código:").grid(row=0, column=0, padx=10, pady=5, sticky=tk.W)
             codigo_var = tk.StringVar()
@@ -828,11 +890,18 @@ class MainWindowWithAuth:
                     cursor.close()
                     connection.close()
                     messagebox.showinfo("Éxito", "Curso agregado correctamente")
+                    self.current_modal_window = None
                     add_window.destroy()
+                    self.list_courses()  # Refrescar lista
                 except Exception as e:
                     messagebox.showerror("Error", f"Error al agregar curso: {str(e)}")
             
-            ttk.Button(add_window, text="Guardar", command=save_course).grid(row=4, column=0, columnspan=2, pady=20)
+            # Frame para botones
+            btn_frame = ttk.Frame(add_window)
+            btn_frame.grid(row=4, column=0, columnspan=2, pady=20)
+            
+            ttk.Button(btn_frame, text="Guardar", command=save_course).pack(side=tk.LEFT, padx=5)
+            ttk.Button(btn_frame, text="Cancelar", command=lambda: (setattr(self, 'current_modal_window', None), add_window.destroy())).pack(side=tk.LEFT, padx=5)
             
         except Exception as e:
             messagebox.showerror("Error", f"Error: {str(e)}")
@@ -905,6 +974,9 @@ class MainWindowWithAuth:
             enroll_window = tk.Toplevel(self.root)
             enroll_window.title("Nueva Matrícula")
             enroll_window.geometry("700x600")
+            
+            # Aplicar control de ventanas modales
+            self.open_modal_window(enroll_window)
             
             # Variables
             estudiante_seleccionado = None
@@ -1037,6 +1109,7 @@ class MainWindowWithAuth:
                         connection.close()
                         
                         messagebox.showinfo("Éxito", "✅ Matrícula realizada correctamente")
+                        self.current_modal_window = None
                         enroll_window.destroy()
                         self.list_enrollments()  # Refrescar lista
                     else:
@@ -1052,7 +1125,7 @@ class MainWindowWithAuth:
             
             ttk.Button(button_frame, text="✅ Realizar Matrícula", command=matricular, 
                       style="Accent.TButton").pack(side=tk.LEFT, padx=5)
-            ttk.Button(button_frame, text="❌ Cancelar", command=enroll_window.destroy).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="❌ Cancelar", command=lambda: (setattr(self, 'current_modal_window', None), enroll_window.destroy())).pack(side=tk.LEFT, padx=5)
             
             # Información de ayuda
             help_label = ttk.Label(main_frame, 
@@ -1111,6 +1184,9 @@ class MainWindowWithAuth:
             create_window = tk.Toplevel(self.root)
             create_window.title("Crear Usuario")
             create_window.geometry("500x450")
+            
+            # Aplicar control de ventanas modales
+            self.open_modal_window(create_window)
             
             # Variables
             email_var = tk.StringVar()
@@ -1294,6 +1370,7 @@ class MainWindowWithAuth:
                     else:
                         messagebox.showinfo("Éxito", f"Usuario administrador creado correctamente: {nombre_var.get()} {apellido_var.get()}")
                     
+                    self.current_modal_window = None
                     create_window.destroy()
                     self.list_users()  # Refrescar lista
                     
@@ -1308,7 +1385,7 @@ class MainWindowWithAuth:
             btn_frame.grid(row=row, column=0, columnspan=2, pady=20)
             
             ttk.Button(btn_frame, text="Guardar Usuario", command=save_user).pack(side=tk.LEFT, padx=5)
-            ttk.Button(btn_frame, text="Cancelar", command=create_window.destroy).pack(side=tk.LEFT, padx=5)
+            ttk.Button(btn_frame, text="Cancelar", command=lambda: (setattr(self, 'current_modal_window', None), create_window.destroy())).pack(side=tk.LEFT, padx=5)
             
             # Información de ayuda
             row += 1
