@@ -20,8 +20,8 @@ class DatabaseConfig:
         self.host = 'localhost'
         self.database = 'sistema_matriculas'
         self.user = 'root'
-        self.password = 'alumno'  # XAMPP por defecto no tiene contraseña
-        self.port = 3307
+        self.password = ''  # XAMPP por defecto no tiene contraseña
+        self.port = 3306
         self.connection = None
         
         # Configurar logging para manejo de errores

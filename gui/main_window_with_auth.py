@@ -887,7 +887,7 @@ class MainWindowWithAuth:
             estudiantes = cursor.fetchall()
             
             # Obtener cursos
-            cursor.execute("SELECT id, codigo, nombre FROM cursos")
+            cursor.execute("SELECT id, codigo, nombre, creditos, profesor FROM cursos")
             cursos = cursor.fetchall()
             
             cursor.close()
@@ -904,89 +904,161 @@ class MainWindowWithAuth:
             # Ventana para nueva matrícula
             enroll_window = tk.Toplevel(self.root)
             enroll_window.title("Nueva Matrícula")
-            enroll_window.geometry("500x300")
+            enroll_window.geometry("700x600")
             
             # Variables
-            estudiante_var = tk.StringVar()
-            curso_var = tk.StringVar()
+            estudiante_seleccionado = None
+            curso_seleccionado = None
             
-            # Campos
-            ttk.Label(enroll_window, text="Estudiante:", font=("Arial", 12, "bold")).grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
+            # Frame principal
+            main_frame = ttk.Frame(enroll_window, padding="20")
+            main_frame.pack(fill=tk.BOTH, expand=True)
             
-            # Lista de estudiantes
-            estudiante_frame = ttk.Frame(enroll_window)
-            estudiante_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=5, sticky=(tk.W, tk.E))
+            # Título
+            ttk.Label(main_frame, text="📋 Nueva Matrícula", font=("Arial", 16, "bold")).pack(pady=(0, 20))
             
-            estudiante_list = tk.Listbox(estudiante_frame, height=5)
-            estudiante_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            # Sección de Estudiante
+            student_frame = ttk.LabelFrame(main_frame, text="Seleccionar Estudiante", padding="10")
+            student_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
             
-            scrollbar1 = ttk.Scrollbar(estudiante_frame, orient=tk.VERTICAL, command=estudiante_list.yview)
-            scrollbar1.pack(side=tk.RIGHT, fill=tk.Y)
-            estudiante_list.config(yscrollcommand=scrollbar1.set)
+            # TreeView para estudiantes
+            student_tree = ttk.Treeview(student_frame, columns=('Código', 'Nombre', 'Apellido'), show='headings', height=6)
+            student_tree.heading('#1', text='Código')
+            student_tree.heading('#2', text='Nombre')
+            student_tree.heading('#3', text='Apellido')
+            
+            student_tree.column('#1', width=100)
+            student_tree.column('#2', width=150)
+            student_tree.column('#3', width=150)
             
             for est in estudiantes:
-                estudiante_list.insert(tk.END, f"{est[1]} - {est[2]} {est[3]}")
+                student_tree.insert('', 'end', values=(est[1], est[2], est[3]))
             
-            ttk.Label(enroll_window, text="Curso:", font=("Arial", 12, "bold")).grid(row=2, column=0, padx=10, pady=10, sticky=tk.W)
+            student_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
             
-            # Lista de cursos
-            curso_frame = ttk.Frame(enroll_window)
-            curso_frame.grid(row=3, column=0, columnspan=2, padx=10, pady=5, sticky=(tk.W, tk.E))
+            # Label para mostrar estudiante seleccionado
+            selected_student_label = ttk.Label(student_frame, text="Ningún estudiante seleccionado", 
+                                             foreground="gray", font=("Arial", 9))
+            selected_student_label.pack(pady=5)
             
-            curso_list = tk.Listbox(curso_frame, height=5)
-            curso_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            # Sección de Curso
+            course_frame = ttk.LabelFrame(main_frame, text="Seleccionar Curso", padding="10")
+            course_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
             
-            scrollbar2 = ttk.Scrollbar(curso_frame, orient=tk.VERTICAL, command=curso_list.yview)
-            scrollbar2.pack(side=tk.RIGHT, fill=tk.Y)
-            curso_list.config(yscrollcommand=scrollbar2.set)
+            # TreeView para cursos
+            course_tree = ttk.Treeview(course_frame, columns=('Código', 'Nombre', 'Créditos', 'Profesor'), show='headings', height=6)
+            course_tree.heading('#1', text='Código')
+            course_tree.heading('#2', text='Nombre')
+            course_tree.heading('#3', text='Créditos')
+            course_tree.heading('#4', text='Profesor')
+            
+            course_tree.column('#1', width=80)
+            course_tree.column('#2', width=200)
+            course_tree.column('#3', width=80)
+            course_tree.column('#4', width=150)
             
             for curso in cursos:
-                curso_list.insert(tk.END, f"{curso[1]} - {curso[2]}")
+                course_tree.insert('', 'end', values=(curso[1], curso[2], curso[3], curso[4]))
+            
+            course_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            
+            # Label para mostrar curso seleccionado
+            selected_course_label = ttk.Label(course_frame, text="Ningún curso seleccionado", 
+                                            foreground="gray", font=("Arial", 9))
+            selected_course_label.pack(pady=5)
+            
+            def on_student_select(event):
+                nonlocal estudiante_seleccionado
+                selection = student_tree.selection()
+                if selection:
+                    item = student_tree.item(selection[0])
+                    values = item['values']
+                    # Encontrar el estudiante por código
+                    for est in estudiantes:
+                        if est[1] == values[0]:  # Comparar por código
+                            estudiante_seleccionado = est
+                            break
+                    selected_student_label.config(text=f"Seleccionado: {values[0]} - {values[1]} {values[2]}", 
+                                                foreground="blue")
+            
+            def on_course_select(event):
+                nonlocal curso_seleccionado
+                selection = course_tree.selection()
+                if selection:
+                    item = course_tree.item(selection[0])
+                    values = item['values']
+                    # Encontrar el curso por código
+                    for curso in cursos:
+                        if curso[1] == values[0]:  # Comparar por código
+                            curso_seleccionado = curso
+                            break
+                    selected_course_label.config(text=f"Seleccionado: {values[0]} - {values[1]} ({values[2]} créditos)", 
+                                               foreground="blue")
+            
+            student_tree.bind('<<TreeviewSelect>>', on_student_select)
+            course_tree.bind('<<TreeviewSelect>>', on_course_select)
             
             def matricular():
                 try:
-                    est_sel = estudiante_list.curselection()
-                    curso_sel = curso_list.curselection()
-                    
-                    if not est_sel:
+                    if not estudiante_seleccionado:
                         messagebox.showerror("Error", "Seleccione un estudiante")
                         return
                     
-                    if not curso_sel:
+                    if not curso_seleccionado:
                         messagebox.showerror("Error", "Seleccione un curso")
                         return
                     
-                    estudiante_id = estudiantes[est_sel[0]][0]
-                    curso_id = cursos[curso_sel[0]][0]
+                    estudiante_id = estudiante_seleccionado[0]
+                    curso_id = curso_seleccionado[0]
                     
                     connection = self.db_config.get_new_connection()
                     cursor = connection.cursor()
                     
                     # Verificar si ya está matriculado
-                    cursor.execute("SELECT id FROM matriculas WHERE estudiante_id = %s AND curso_id = %s", 
+                    cursor.execute("SELECT id FROM matriculas WHERE estudiante_id = %s AND curso_id = %s AND estado = 'ACTIVA'", 
                                  (estudiante_id, curso_id))
                     if cursor.fetchone():
-                        messagebox.showwarning("Advertencia", "El estudiante ya está matriculado en este curso")
+                        messagebox.showwarning("Advertencia", 
+                                             f"El estudiante {estudiante_seleccionado[2]} {estudiante_seleccionado[3]} ya está matriculado en {curso_seleccionado[2]}")
                         cursor.close()
                         connection.close()
                         return
                     
-                    # Insertar matrícula
-                    query = "INSERT INTO matriculas (estudiante_id, curso_id, estado) VALUES (%s, %s, 'ACTIVA')"
-                    cursor.execute(query, (estudiante_id, curso_id))
-                    
-                    connection.commit()
-                    cursor.close()
-                    connection.close()
-                    
-                    messagebox.showinfo("Éxito", "Matrícula realizada correctamente")
-                    enroll_window.destroy()
-                    self.list_enrollments()  # Refrescar lista
+                    # Confirmar matrícula
+                    if messagebox.askyesno("Confirmar Matrícula", 
+                                         f"¿Confirma la matrícula de:\n\nEstudiante: {estudiante_seleccionado[1]} - {estudiante_seleccionado[2]} {estudiante_seleccionado[3]}\nCurso: {curso_seleccionado[1]} - {curso_seleccionado[2]}"):
+                        
+                        # Insertar matrícula
+                        query = "INSERT INTO matriculas (estudiante_id, curso_id, estado) VALUES (%s, %s, 'ACTIVA')"
+                        cursor.execute(query, (estudiante_id, curso_id))
+                        
+                        connection.commit()
+                        cursor.close()
+                        connection.close()
+                        
+                        messagebox.showinfo("Éxito", "✅ Matrícula realizada correctamente")
+                        enroll_window.destroy()
+                        self.list_enrollments()  # Refrescar lista
+                    else:
+                        cursor.close()
+                        connection.close()
                     
                 except Exception as e:
                     messagebox.showerror("Error", f"Error al matricular: {str(e)}")
             
-            ttk.Button(enroll_window, text="Matricular", command=matricular).grid(row=4, column=0, columnspan=2, pady=20)
+            # Frame para botones
+            button_frame = ttk.Frame(main_frame)
+            button_frame.pack(pady=20)
+            
+            ttk.Button(button_frame, text="✅ Realizar Matrícula", command=matricular, 
+                      style="Accent.TButton").pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="❌ Cancelar", command=enroll_window.destroy).pack(side=tk.LEFT, padx=5)
+            
+            # Información de ayuda
+            help_label = ttk.Label(main_frame, 
+                                 text="💡 Seleccione un estudiante y un curso de las tablas de arriba, luego presione 'Realizar Matrícula'",
+                                 font=("Arial", 9), foreground="gray")
+            help_label.pack(pady=5)
             
         except Exception as e:
             messagebox.showerror("Error", f"Error: {str(e)}")
@@ -1038,7 +1110,7 @@ class MainWindowWithAuth:
             # Ventana para crear usuario
             create_window = tk.Toplevel(self.root)
             create_window.title("Crear Usuario")
-            create_window.geometry("500x400")
+            create_window.geometry("500x450")
             
             # Variables
             email_var = tk.StringVar()
@@ -1048,24 +1120,13 @@ class MainWindowWithAuth:
             rol_var = tk.StringVar(value="ESTUDIANTE")
             codigo_var = tk.StringVar()
             
+            # Variables para controlar el estado de los campos
+            email_entry = None
+            nombre_entry = None
+            apellido_entry = None
+            
             # Campos
             row = 0
-            ttk.Label(create_window, text="Email:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
-            ttk.Entry(create_window, textvariable=email_var, width=30).grid(row=row, column=1, padx=10, pady=5)
-            
-            row += 1
-            ttk.Label(create_window, text="Contraseña:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
-            ttk.Entry(create_window, textvariable=password_var, show="*", width=30).grid(row=row, column=1, padx=10, pady=5)
-            
-            row += 1
-            ttk.Label(create_window, text="Nombre:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
-            ttk.Entry(create_window, textvariable=nombre_var, width=30).grid(row=row, column=1, padx=10, pady=5)
-            
-            row += 1
-            ttk.Label(create_window, text="Apellido:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
-            ttk.Entry(create_window, textvariable=apellido_var, width=30).grid(row=row, column=1, padx=10, pady=5)
-            
-            row += 1
             ttk.Label(create_window, text="Rol:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
             rol_combo = ttk.Combobox(create_window, textvariable=rol_var, values=["ADMINISTRADOR", "ESTUDIANTE"], 
                                    state="readonly", width=27)
@@ -1073,28 +1134,121 @@ class MainWindowWithAuth:
             
             row += 1
             ttk.Label(create_window, text="Código Estudiante:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
-            codigo_entry = ttk.Entry(create_window, textvariable=codigo_var, width=30)
-            codigo_entry.grid(row=row, column=1, padx=10, pady=5)
+            codigo_frame = ttk.Frame(create_window)
+            codigo_frame.grid(row=row, column=1, padx=10, pady=5, sticky=tk.W)
             
-            # Función para habilitar/deshabilitar código según rol
+            codigo_entry = ttk.Entry(codigo_frame, textvariable=codigo_var, width=20)
+            codigo_entry.pack(side=tk.LEFT)
+            
+            buscar_btn = ttk.Button(codigo_frame, text="Buscar", width=8)
+            buscar_btn.pack(side=tk.LEFT, padx=(5, 0))
+            
+            row += 1
+            ttk.Label(create_window, text="Email:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
+            email_entry = ttk.Entry(create_window, textvariable=email_var, width=30)
+            email_entry.grid(row=row, column=1, padx=10, pady=5)
+            
+            row += 1
+            ttk.Label(create_window, text="Nombre:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
+            nombre_entry = ttk.Entry(create_window, textvariable=nombre_var, width=30)
+            nombre_entry.grid(row=row, column=1, padx=10, pady=5)
+            
+            row += 1
+            ttk.Label(create_window, text="Apellido:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
+            apellido_entry = ttk.Entry(create_window, textvariable=apellido_var, width=30)
+            apellido_entry.grid(row=row, column=1, padx=10, pady=5)
+            
+            row += 1
+            ttk.Label(create_window, text="Contraseña:").grid(row=row, column=0, padx=10, pady=5, sticky=tk.W)
+            ttk.Entry(create_window, textvariable=password_var, show="*", width=30).grid(row=row, column=1, padx=10, pady=5)
+            
+            # Función para buscar estudiante por código
+            def buscar_estudiante():
+                codigo = codigo_var.get().strip()
+                if not codigo:
+                    messagebox.showwarning("Advertencia", "Ingrese un código de estudiante")
+                    return
+                
+                try:
+                    connection = self.db_config.get_new_connection()
+                    if connection is None:
+                        messagebox.showerror("Error", "No se pudo conectar a la base de datos")
+                        return
+                    
+                    cursor = connection.cursor()
+                    cursor.execute("SELECT nombre, apellido, email FROM estudiantes WHERE codigo = %s", (codigo,))
+                    result = cursor.fetchone()
+                    
+                    if result:
+                        # Autocompletar datos
+                        nombre_var.set(result[0])
+                        apellido_var.set(result[1])
+                        email_var.set(result[2])
+                        
+                        # Deshabilitar campos autocompletados
+                        nombre_entry.config(state="readonly")
+                        apellido_entry.config(state="readonly")
+                        email_entry.config(state="readonly")
+                        
+                        messagebox.showinfo("Éxito", f"Estudiante encontrado: {result[0]} {result[1]}")
+                    else:
+                        messagebox.showwarning("Advertencia", "No se encontró un estudiante con ese código")
+                        # Limpiar campos si no se encuentra
+                        nombre_var.set("")
+                        apellido_var.set("")
+                        email_var.set("")
+                        
+                        # Habilitar campos para ingreso manual
+                        nombre_entry.config(state="normal")
+                        apellido_entry.config(state="normal")
+                        email_entry.config(state="normal")
+                    
+                    cursor.close()
+                    connection.close()
+                    
+                except Exception as e:
+                    messagebox.showerror("Error", f"Error al buscar estudiante: {str(e)}")
+            
+            buscar_btn.config(command=buscar_estudiante)
+            
+            # Función para habilitar/deshabilitar campos según rol
             def on_rol_change(*args):
                 if rol_var.get() == "ESTUDIANTE":
                     codigo_entry.config(state="normal")
+                    buscar_btn.config(state="normal")
                 else:
                     codigo_entry.config(state="disabled")
+                    buscar_btn.config(state="disabled")
                     codigo_var.set("")
+                    # Limpiar y habilitar campos para administrador
+                    nombre_var.set("")
+                    apellido_var.set("")
+                    email_var.set("")
+                    nombre_entry.config(state="normal")
+                    apellido_entry.config(state="normal")
+                    email_entry.config(state="normal")
             
             rol_var.trace('w', on_rol_change)
             
             def save_user():
                 try:
-                    if not all([email_var.get(), password_var.get(), nombre_var.get(), apellido_var.get()]):
-                        messagebox.showerror("Error", "Todos los campos son obligatorios")
+                    # Validaciones básicas
+                    if not password_var.get():
+                        messagebox.showerror("Error", "La contraseña es obligatoria")
                         return
                     
-                    if rol_var.get() == "ESTUDIANTE" and not codigo_var.get():
-                        messagebox.showerror("Error", "El código de estudiante es obligatorio")
-                        return
+                    if rol_var.get() == "ESTUDIANTE":
+                        if not codigo_var.get():
+                            messagebox.showerror("Error", "El código de estudiante es obligatorio")
+                            return
+                        if not all([email_var.get(), nombre_var.get(), apellido_var.get()]):
+                            messagebox.showerror("Error", "Debe buscar un estudiante válido o completar todos los campos")
+                            return
+                    else:
+                        # Para administradores, validar campos manuales
+                        if not all([email_var.get(), nombre_var.get(), apellido_var.get()]):
+                            messagebox.showerror("Error", "Todos los campos son obligatorios")
+                            return
                     
                     connection = self.db_config.get_new_connection()
                     if connection is None:
@@ -1102,6 +1256,14 @@ class MainWindowWithAuth:
                         return
                     
                     cursor = connection.cursor()
+                    
+                    # Verificar si el email ya existe
+                    cursor.execute("SELECT id FROM usuarios WHERE email = %s", (email_var.get(),))
+                    if cursor.fetchone():
+                        messagebox.showerror("Error", "Ya existe un usuario con ese email")
+                        cursor.close()
+                        connection.close()
+                        return
                     
                     # Hash de la contraseña
                     password_hash = hashlib.sha256(password_var.get().encode()).hexdigest()
@@ -1120,30 +1282,38 @@ class MainWindowWithAuth:
                         True
                     ))
                     
-                    # Si es estudiante, también agregarlo a la tabla estudiantes
-                    if rol_var.get() == "ESTUDIANTE":
-                        query_est = """INSERT INTO estudiantes (codigo, nombre, apellido, email) 
-                                      VALUES (%s, %s, %s, %s)"""
-                        cursor.execute(query_est, (
-                            codigo_var.get(),
-                            nombre_var.get(),
-                            apellido_var.get(),
-                            email_var.get()
-                        ))
+                    # NOTA: No crear duplicado en tabla estudiantes ya que ya existe
+                    # Solo se crea el usuario que referencia al estudiante existente
                     
                     connection.commit()
                     cursor.close()
                     connection.close()
                     
-                    messagebox.showinfo("Éxito", "Usuario creado correctamente")
+                    if rol_var.get() == "ESTUDIANTE":
+                        messagebox.showinfo("Éxito", f"Usuario creado correctamente para el estudiante {nombre_var.get()} {apellido_var.get()}")
+                    else:
+                        messagebox.showinfo("Éxito", f"Usuario administrador creado correctamente: {nombre_var.get()} {apellido_var.get()}")
+                    
                     create_window.destroy()
                     self.list_users()  # Refrescar lista
                     
                 except Exception as e:
                     messagebox.showerror("Error", f"Error al crear usuario: {str(e)}")
             
+            # Ejecutar cambio inicial de rol
+            on_rol_change()
+            
             row += 2
-            ttk.Button(create_window, text="Guardar", command=save_user).grid(row=row, column=0, columnspan=2, pady=20)
+            btn_frame = ttk.Frame(create_window)
+            btn_frame.grid(row=row, column=0, columnspan=2, pady=20)
+            
+            ttk.Button(btn_frame, text="Guardar Usuario", command=save_user).pack(side=tk.LEFT, padx=5)
+            ttk.Button(btn_frame, text="Cancelar", command=create_window.destroy).pack(side=tk.LEFT, padx=5)
+            
+            # Información de ayuda
+            row += 1
+            info_text = "• Para estudiantes: Seleccione rol 'ESTUDIANTE', ingrese código y presione 'Buscar'\n• Para administradores: Seleccione rol 'ADMINISTRADOR' y complete manualmente"
+            ttk.Label(create_window, text=info_text, font=("Arial", 8), foreground="gray", justify=tk.LEFT).grid(row=row, column=0, columnspan=2, padx=10, pady=5)
             
         except Exception as e:
             messagebox.showerror("Error", f"Error: {str(e)}")

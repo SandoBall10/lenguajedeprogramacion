@@ -506,3 +506,11 @@
 2025-07-17 10:51:32,102 - config.database - INFO - Conexión exitosa a MySQL
 2025-07-17 10:52:21,744 - config.database - INFO - Conexión exitosa a MySQL
 2025-07-17 10:59:41,373 - __main__ - INFO - Sistema de Matrículas finalizado correctamente
+2025-07-17 17:08:46,262 - __main__ - INFO - Iniciando Sistema de Matrículas Universitarias con Autenticación
+2025-07-17 17:09:32,574 - config.database - ERROR - Error al crear base de datos: 2003 (HY000): Can't connect to MySQL server on 'localhost:3307' (10061)
+2025-07-17 17:09:32,577 - __main__ - INFO - Sistema de Matrículas finalizado correctamente
+2025-07-17 17:11:33,947 - __main__ - INFO - Iniciando Sistema de Matrículas Universitarias con Autenticación
+2025-07-17 17:11:41,117 - config.database - INFO - Base de datos y tablas creadas exitosamente
+2025-07-17 17:11:46,050 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 17:12:15,859 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 17:18:00,174 - __main__ - INFO - Sistema de Matrículas finalizado correctamente
