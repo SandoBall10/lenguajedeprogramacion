@@ -1,0 +1,7 @@
+# Autor: Sistema de Matrículas Universitarias
+# Dependencias del proyecto
+
+mysql-connector-python==8.2.0
+pandas==2.1.4
+numpy==1.24.3
+matplotlib==3.7.2
