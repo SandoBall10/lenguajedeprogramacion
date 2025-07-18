@@ -8,3 +8,22 @@
 2025-07-17 18:53:40,677 - config.database - INFO - Conexión exitosa a MySQL
 2025-07-17 18:53:58,034 - config.database - INFO - Conexión exitosa a MySQL
 2025-07-17 18:57:58,602 - __main__ - INFO - Sistema de Matrículas finalizado correctamente
+2025-07-17 19:27:32,036 - __main__ - INFO - Iniciando Sistema de Matrículas Universitarias con Autenticación
+2025-07-17 19:27:35,556 - config.database - INFO - Base de datos y tablas creadas exitosamente
+2025-07-17 19:27:37,714 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 19:27:53,262 - __main__ - INFO - Sistema de Matrículas finalizado correctamente
+2025-07-17 19:28:09,961 - __main__ - INFO - Iniciando Sistema de Matrículas Universitarias con Autenticación
+2025-07-17 19:28:13,999 - config.database - INFO - Base de datos y tablas creadas exitosamente
+2025-07-17 19:28:14,978 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 19:28:38,559 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 19:31:32,905 - __main__ - INFO - Sistema de Matrículas finalizado correctamente
+2025-07-17 19:31:34,866 - __main__ - INFO - Iniciando Sistema de Matrículas Universitarias con Autenticación
+2025-07-17 19:31:37,593 - config.database - INFO - Base de datos y tablas creadas exitosamente
+2025-07-17 19:31:39,458 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 19:32:03,278 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 19:33:46,871 - __main__ - INFO - Sistema de Matrículas finalizado correctamente
+2025-07-17 19:53:35,512 - __main__ - INFO - Iniciando Sistema de Matrículas Universitarias con Autenticación
+2025-07-17 19:53:39,777 - config.database - INFO - Base de datos y tablas creadas exitosamente
+2025-07-17 19:53:42,638 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 19:53:56,995 - config.database - INFO - Conexión exitosa a MySQL
+2025-07-17 19:58:30,732 - __main__ - INFO - Sistema de Matrículas finalizado correctamente

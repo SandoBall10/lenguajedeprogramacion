@@ -489,16 +489,22 @@ class MainWindowWithAuth:
                 return
                 
             cursor = connection.cursor()
-            cursor.execute("SELECT codigo, nombre, creditos, profesor, cupos_disponibles FROM cursos")
+            cursor.execute("SELECT codigo, nombre, creditos, profesor, horario FROM cursos")
             courses = cursor.fetchall()
             
             # Crear tabla
-            tree = ttk.Treeview(self.content_frame, columns=('Código', 'Nombre', 'Créditos', 'Profesor', 'Cupos'), show='headings')
+            tree = ttk.Treeview(self.content_frame, columns=('Código', 'Nombre', 'Créditos', 'Profesor', 'Horario'), show='headings')
             tree.heading('#1', text='Código')
             tree.heading('#2', text='Nombre')
             tree.heading('#3', text='Créditos')
             tree.heading('#4', text='Profesor')
-            tree.heading('#5', text='Cupos')
+            tree.heading('#5', text='Horario')
+            
+            tree.column('#1', width=80)
+            tree.column('#2', width=200)
+            tree.column('#3', width=70)
+            tree.column('#4', width=130)
+            tree.column('#5', width=220)
             
             for course in courses:
                 tree.insert('', 'end', values=course)
@@ -528,7 +534,7 @@ class MainWindowWithAuth:
             cursor = connection.cursor()
             
             # Obtener matrículas del estudiante logueado
-            query = """SELECT m.id, c.codigo, c.nombre, c.creditos, m.fecha_matricula, m.estado 
+            query = """SELECT m.id, c.codigo, c.nombre, c.creditos, c.profesor, c.horario, m.estado 
                       FROM matriculas m 
                       JOIN cursos c ON m.curso_id = c.id 
                       JOIN estudiantes e ON m.estudiante_id = e.id 
@@ -551,20 +557,22 @@ class MainWindowWithAuth:
                 btn_frame.pack(pady=10)
                 
                 # Crear tabla
-                tree = ttk.Treeview(self.content_frame, columns=('ID', 'Código', 'Curso', 'Créditos', 'Fecha', 'Estado'), show='headings')
+                tree = ttk.Treeview(self.content_frame, columns=('ID', 'Código', 'Curso', 'Créditos', 'Profesor', 'Horario', 'Estado'), show='headings')
                 tree.heading('#1', text='ID')
                 tree.heading('#2', text='Código')
                 tree.heading('#3', text='Curso')
                 tree.heading('#4', text='Créditos')
-                tree.heading('#5', text='Fecha')
-                tree.heading('#6', text='Estado')
+                tree.heading('#5', text='Profesor')
+                tree.heading('#6', text='Horario')
+                tree.heading('#7', text='Estado')
                 
                 tree.column('#1', width=50)
                 tree.column('#2', width=80)
-                tree.column('#3', width=200)
+                tree.column('#3', width=180)
                 tree.column('#4', width=80)
                 tree.column('#5', width=120)
-                tree.column('#6', width=100)
+                tree.column('#6', width=180)
+                tree.column('#7', width=100)
                 
                 for enrollment in enrollments:
                     tree.insert('', 'end', values=enrollment)
@@ -652,7 +660,7 @@ class MainWindowWithAuth:
             cursor = connection.cursor()
             
             # Obtener cursos disponibles (no matriculados por este estudiante)
-            query = """SELECT c.id, c.codigo, c.nombre, c.creditos, c.profesor 
+            query = """SELECT c.id, c.codigo, c.nombre, c.creditos, c.profesor, c.horario 
                       FROM cursos c 
                       WHERE c.id NOT IN (
                           SELECT m.curso_id 
@@ -686,16 +694,18 @@ class MainWindowWithAuth:
             curso_frame = ttk.Frame(enroll_window)
             curso_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
             
-            tree = ttk.Treeview(curso_frame, columns=('Código', 'Nombre', 'Créditos', 'Profesor'), show='headings')
+            tree = ttk.Treeview(curso_frame, columns=('Código', 'Nombre', 'Créditos', 'Profesor', 'Horario'), show='headings')
             tree.heading('#1', text='Código')
             tree.heading('#2', text='Nombre')
             tree.heading('#3', text='Créditos')
             tree.heading('#4', text='Profesor')
+            tree.heading('#5', text='Horario')
             
-            tree.column('#1', width=100)
-            tree.column('#2', width=250)
-            tree.column('#3', width=80)
-            tree.column('#4', width=150)
+            tree.column('#1', width=80)
+            tree.column('#2', width=180)
+            tree.column('#3', width=70)
+            tree.column('#4', width=120)
+            tree.column('#5', width=200)
             
             for curso in cursos_disponibles:
                 tree.insert('', 'end', values=curso[1:])  # Omitir el ID
@@ -910,7 +920,7 @@ class MainWindowWithAuth:
             # Ventana para agregar curso
             add_window = tk.Toplevel(self.root)
             add_window.title("Agregar Curso")
-            add_window.geometry("400x250")
+            add_window.geometry("400x300")
             
             # Aplicar control de ventanas modales
             self.open_modal_window(add_window)
@@ -932,13 +942,31 @@ class MainWindowWithAuth:
             profesor_var = tk.StringVar()
             ttk.Entry(add_window, textvariable=profesor_var).grid(row=3, column=1, padx=10, pady=5)
             
+            ttk.Label(add_window, text="Horario:").grid(row=4, column=0, padx=10, pady=5, sticky=tk.W)
+            horario_var = tk.StringVar()
+            horario_entry = ttk.Entry(add_window, textvariable=horario_var, width=30)
+            horario_entry.grid(row=4, column=1, padx=10, pady=5)
+            
+            # Agregar texto de ayuda para el horario
+            help_label = ttk.Label(add_window, text="Ej: Lunes 8:00-10:00, Miércoles 14:00-16:00", 
+                                 font=("Arial", 8), foreground="gray")
+            help_label.grid(row=5, column=1, padx=10, pady=(0, 5), sticky=tk.W)
+            
             def save_course():
                 try:
+                    # Validar que todos los campos estén llenos
+                    if not all([codigo_var.get().strip(), nombre_var.get().strip(), 
+                              creditos_var.get().strip(), profesor_var.get().strip(), 
+                              horario_var.get().strip()]):
+                        messagebox.showerror("Error", "Todos los campos son obligatorios")
+                        return
+                    
                     cursor = connection.cursor()
-                    query = """INSERT INTO cursos (codigo, nombre, creditos, profesor) 
-                              VALUES (%s, %s, %s, %s)"""
+                    query = """INSERT INTO cursos (codigo, nombre, creditos, profesor, horario) 
+                              VALUES (%s, %s, %s, %s, %s)"""
                     cursor.execute(query, (codigo_var.get(), nombre_var.get(), 
-                                         int(creditos_var.get()), profesor_var.get()))
+                                         int(creditos_var.get()), profesor_var.get(), 
+                                         horario_var.get()))
                     connection.commit()
                     cursor.close()
                     connection.close()
@@ -946,12 +974,14 @@ class MainWindowWithAuth:
                     self.current_modal_window = None
                     add_window.destroy()
                     self.list_courses()  # Refrescar lista
+                except ValueError:
+                    messagebox.showerror("Error", "Los créditos deben ser un número válido")
                 except Exception as e:
                     messagebox.showerror("Error", f"Error al agregar curso: {str(e)}")
             
             # Frame para botones
             btn_frame = ttk.Frame(add_window)
-            btn_frame.grid(row=4, column=0, columnspan=2, pady=20)
+            btn_frame.grid(row=6, column=0, columnspan=2, pady=20)
             
             ttk.Button(btn_frame, text="Guardar", command=save_course).pack(side=tk.LEFT, padx=5)
             ttk.Button(btn_frame, text="Cancelar", command=lambda: (setattr(self, 'current_modal_window', None), add_window.destroy())).pack(side=tk.LEFT, padx=5)
@@ -968,7 +998,7 @@ class MainWindowWithAuth:
                 return
                 
             cursor = connection.cursor()
-            cursor.execute("SELECT codigo, nombre, creditos, profesor FROM cursos")
+            cursor.execute("SELECT codigo, nombre, creditos, profesor, horario FROM cursos")
             courses = cursor.fetchall()
             
             # Limpiar área de contenido
@@ -976,11 +1006,18 @@ class MainWindowWithAuth:
                 widget.destroy()
             
             # Crear tabla
-            tree = ttk.Treeview(self.content_area, columns=('Código', 'Nombre', 'Créditos', 'Profesor'), show='headings')
+            tree = ttk.Treeview(self.content_area, columns=('Código', 'Nombre', 'Créditos', 'Profesor', 'Horario'), show='headings')
             tree.heading('#1', text='Código')
             tree.heading('#2', text='Nombre')
             tree.heading('#3', text='Créditos')
             tree.heading('#4', text='Profesor')
+            tree.heading('#5', text='Horario')
+            
+            tree.column('#1', width=80)
+            tree.column('#2', width=200)
+            tree.column('#3', width=80)
+            tree.column('#4', width=150)
+            tree.column('#5', width=250)
             
             for course in courses:
                 tree.insert('', 'end', values=course)
@@ -1009,7 +1046,7 @@ class MainWindowWithAuth:
             estudiantes = cursor.fetchall()
             
             # Obtener cursos
-            cursor.execute("SELECT id, codigo, nombre, creditos, profesor FROM cursos")
+            cursor.execute("SELECT id, codigo, nombre, creditos, profesor, horario FROM cursos")
             cursos = cursor.fetchall()
             
             cursor.close()
@@ -1071,19 +1108,21 @@ class MainWindowWithAuth:
             course_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
             
             # TreeView para cursos
-            course_tree = ttk.Treeview(course_frame, columns=('Código', 'Nombre', 'Créditos', 'Profesor'), show='headings', height=6)
+            course_tree = ttk.Treeview(course_frame, columns=('Código', 'Nombre', 'Créditos', 'Profesor', 'Horario'), show='headings', height=6)
             course_tree.heading('#1', text='Código')
             course_tree.heading('#2', text='Nombre')
             course_tree.heading('#3', text='Créditos')
             course_tree.heading('#4', text='Profesor')
+            course_tree.heading('#5', text='Horario')
             
             course_tree.column('#1', width=80)
-            course_tree.column('#2', width=200)
-            course_tree.column('#3', width=80)
-            course_tree.column('#4', width=150)
+            course_tree.column('#2', width=150)
+            course_tree.column('#3', width=70)
+            course_tree.column('#4', width=120)
+            course_tree.column('#5', width=180)
             
             for curso in cursos:
-                course_tree.insert('', 'end', values=(curso[1], curso[2], curso[3], curso[4]))
+                course_tree.insert('', 'end', values=(curso[1], curso[2], curso[3], curso[4], curso[5]))
             
             course_tree.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
             
@@ -1117,7 +1156,7 @@ class MainWindowWithAuth:
                         if curso[1] == values[0]:  # Comparar por código
                             curso_seleccionado = curso
                             break
-                    selected_course_label.config(text=f"Seleccionado: {values[0]} - {values[1]} ({values[2]} créditos)", 
+                    selected_course_label.config(text=f"Seleccionado: {values[0]} - {values[1]} ({values[2]} créditos) - {values[4]}", 
                                                foreground="blue")
             
             student_tree.bind('<<TreeviewSelect>>', on_student_select)
