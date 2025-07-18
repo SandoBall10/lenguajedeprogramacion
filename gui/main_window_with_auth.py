@@ -840,7 +840,9 @@ class MainWindowWithAuth:
             
             ttk.Label(add_window, text="Carrera:").grid(row=3, column=0, padx=10, pady=5, sticky=tk.W)
             carrera_var = tk.StringVar()
-            ttk.Entry(add_window, textvariable=carrera_var).grid(row=3, column=1, padx=10, pady=5)
+            carrera_combo = ttk.Combobox(add_window, textvariable=carrera_var, state="readonly")
+            carrera_combo['values'] = ('Ing. Sistemas', 'Ing. Industrial', 'Ing. Civil', 'Ing. Eléctrica', 'Ing. Mecánica', 'Ing. Química', 'Arquitectura', 'Administración', 'Contaduría', 'Derecho')
+            carrera_combo.grid(row=3, column=1, padx=10, pady=5)
             
             ttk.Label(add_window, text="Email:").grid(row=4, column=0, padx=10, pady=5, sticky=tk.W)
             email_var = tk.StringVar()
