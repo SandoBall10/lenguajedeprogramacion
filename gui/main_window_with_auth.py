@@ -25,7 +25,7 @@ class LoginWindow:
         self.parent = parent
         self.root = tk.Toplevel(parent) if parent else tk.Tk()
         self.root.title("Sistema de Matrículas - Login")
-        self.root.geometry("400x300")
+        self.root.geometry("400x250")
         self.root.resizable(False, False)
         
         # Centrar ventana
@@ -44,16 +44,28 @@ class LoginWindow:
         
     def center_window(self):
         """Centra la ventana en la pantalla"""
+        # Actualizar la ventana para obtener las dimensiones reales
         self.root.update_idletasks()
-        width = self.root.winfo_width()
-        height = self.root.winfo_height()
-        x = (self.root.winfo_screenwidth() // 2) - (width // 2)
-        y = (self.root.winfo_screenheight() // 2) - (height // 2)
-        self.root.geometry(f'{width}x{height}+{x}+{y}')
+        
+        # Obtener dimensiones de la ventana
+        window_width = 400
+        window_height = 250
+        
+        # Obtener dimensiones de la pantalla
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
+        
+        # Calcular posición para centrar
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
+        
+        # Aplicar geometría centrada
+        self.root.geometry(f'{window_width}x{window_height}+{x}+{y}')
         
         # Hacer que la ventana sea modal
-        self.root.transient(self.parent)
-        self.root.grab_set()
+        if self.parent:
+            self.root.transient(self.parent)
+            self.root.grab_set()
         self.root.focus_set()
         
     def setup_services(self):
@@ -143,12 +155,6 @@ class LoginWindow:
         cancel_btn = ttk.Button(button_frame, text="Cancelar", 
                                command=self.root.destroy)
         cancel_btn.pack(side=tk.LEFT)
-        
-        # Info de credenciales
-        info_label = ttk.Label(main_frame, 
-                              text="Credenciales por defecto:\nAdmin: admin@sistema.com / admin123",
-                              font=("Arial", 8), foreground="gray")
-        info_label.grid(row=4, column=0, columnspan=2, pady=10)
         
         # Configurar Enter para login
         self.root.bind('<Return>', lambda e: self.login())
