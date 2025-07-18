@@ -532,6 +532,10 @@ class MainWindowWithAuth:
             cursor.execute(query, (self.usuario_logueado['id'],))
             enrollments = cursor.fetchall()
             
+            # Cerrar la conexión inicial después de obtener los datos
+            cursor.close()
+            connection.close()
+            
             if not enrollments:
                 ttk.Label(self.content_frame, text="No tienes matrículas registradas", 
                          font=("Arial", 12)).pack(pady=20)
@@ -573,10 +577,17 @@ class MainWindowWithAuth:
                         curso_nombre = item['values'][2]
                         
                         if messagebox.askyesno("Confirmar", f"¿Está seguro que desea cancelar la matrícula en {curso_nombre}?"):
-                            cursor = connection.cursor()
-                            cursor.execute("UPDATE matriculas SET estado = 'CANCELADA' WHERE id = %s", (matricula_id,))
-                            connection.commit()
-                            cursor.close()
+                            # Crear nueva conexión para la operación de cancelación
+                            cancel_connection = self.db_config.get_new_connection()
+                            if cancel_connection is None:
+                                messagebox.showerror("Error", "No se pudo conectar a la base de datos")
+                                return
+                            
+                            cancel_cursor = cancel_connection.cursor()
+                            cancel_cursor.execute("UPDATE matriculas SET estado = 'CANCELADA' WHERE id = %s", (matricula_id,))
+                            cancel_connection.commit()
+                            cancel_cursor.close()
+                            cancel_connection.close()
                             
                             messagebox.showinfo("Éxito", "Matrícula cancelada correctamente")
                             self.show_my_enrollments()  # Refrescar
@@ -586,9 +597,6 @@ class MainWindowWithAuth:
                 
                 ttk.Button(btn_frame, text="Cancelar Matrícula Seleccionada", 
                           command=cancel_enrollment).pack(side=tk.LEFT, padx=5)
-            
-            cursor.close()
-            connection.close()
             
         except Exception as e:
             messagebox.showerror("Error", f"Error al cargar matrículas: {str(e)}")
@@ -702,22 +710,61 @@ class MainWindowWithAuth:
                     curso_nombre = curso_seleccionado[2]
                     
                     if messagebox.askyesno("Confirmar", f"¿Desea matricularse en {curso_nombre}?"):
+                        # Crear nueva conexión para la matrícula
+                        matricula_connection = self.db_config.get_new_connection()
+                        if matricula_connection is None:
+                            messagebox.showerror("Error", "No se pudo conectar a la base de datos")
+                            return
+                        
+                        matricula_cursor = matricula_connection.cursor()
+                        
                         # Obtener el estudiante_id
-                        cursor.execute("""SELECT e.id FROM estudiantes e 
+                        matricula_cursor.execute("""SELECT e.id FROM estudiantes e 
                                          JOIN usuarios u ON e.email = u.email 
                                          WHERE u.id = %s""", (self.usuario_logueado['id'],))
-                        estudiante_result = cursor.fetchone()
+                        estudiante_result = matricula_cursor.fetchone()
                         
                         if not estudiante_result:
                             messagebox.showerror("Error", "No se encontró el registro de estudiante")
+                            matricula_cursor.close()
+                            matricula_connection.close()
                             return
                         
                         estudiante_id = estudiante_result[0]
                         
-                        # Insertar matrícula
-                        cursor.execute("INSERT INTO matriculas (estudiante_id, curso_id, estado) VALUES (%s, %s, 'ACTIVA')", 
+                        # Verificar si ya existe una matrícula (activa o cancelada)
+                        matricula_cursor.execute("""SELECT id, estado FROM matriculas 
+                                                   WHERE estudiante_id = %s AND curso_id = %s""", 
+                                               (estudiante_id, curso_id))
+                        matricula_existente = matricula_cursor.fetchone()
+                        
+                        if matricula_existente:
+                            matricula_id, estado_actual = matricula_existente
+                            if estado_actual == 'ACTIVA':
+                                messagebox.showwarning("Advertencia", "Ya estás matriculado en este curso")
+                                matricula_cursor.close()
+                                matricula_connection.close()
+                                return
+                            elif estado_actual == 'CANCELADA':
+                                # Reactivar la matrícula cancelada
+                                matricula_cursor.execute("""UPDATE matriculas 
+                                                           SET estado = 'ACTIVA', fecha_matricula = CURRENT_TIMESTAMP 
+                                                           WHERE id = %s""", (matricula_id,))
+                                matricula_connection.commit()
+                                matricula_cursor.close()
+                                matricula_connection.close()
+                                
+                                messagebox.showinfo("Éxito", f"¡Te has matriculado exitosamente en {curso_nombre}!")
+                                self.current_modal_window = None
+                                enroll_window.destroy()
+                                return
+                        
+                        # Si no existe matrícula previa, crear una nueva
+                        matricula_cursor.execute("INSERT INTO matriculas (estudiante_id, curso_id, estado) VALUES (%s, %s, 'ACTIVA')", 
                                      (estudiante_id, curso_id))
-                        connection.commit()
+                        matricula_connection.commit()
+                        matricula_cursor.close()
+                        matricula_connection.close()
                         
                         messagebox.showinfo("Éxito", f"¡Te has matriculado exitosamente en {curso_nombre}!")
                         self.current_modal_window = None

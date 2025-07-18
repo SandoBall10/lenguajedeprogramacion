@@ -70,7 +70,7 @@ def show_startup_banner():
 {WHITE}║     • Paradigmas: Orientado a Objetos, Funcional, Lógico                     ║{RESET}
 {WHITE}║     • Lenguaje: Python 3.x                                                   ║{RESET}
 {WHITE}║     • Base de Datos: MySQL (XAMPP)                                           ║{RESET}
-{WHITE}║     • Interfaz: Consola con colores + GUI (tkinter)                          ║{RESET}
+{WHITE}║     • Interfaz: Gráfica (tkinter)                                            ║{RESET}
 {WHITE}║     • Ciencia de Datos: pandas, numpy, matplotlib                            ║{RESET}
 {CYAN}║                                                                              ║{RESET}
 {YELLOW}║  🔐 Credenciales por defecto:                                               ║{RESET}
@@ -82,51 +82,15 @@ def show_startup_banner():
     print(banner)
 
 def get_execution_mode() -> str:
-    """Permite al usuario seleccionar el modo de ejecución"""
+    """Inicia directamente la interfaz gráfica"""
     GREEN = '\033[32m'
     CYAN = '\033[36m'
-    YELLOW = '\033[33m'
-    RED = '\033[31m'
     RESET = '\033[0m'
     
-    print(f"\n{GREEN}🚀 MODOS DE EJECUCIÓN DISPONIBLES:{RESET}")
-    print(f"{CYAN}1. Aplicación de Consola con Autenticación (Recomendado){RESET}")
-    print(f"{CYAN}2. Interfaz Gráfica con Login{RESET}")
+    print(f"\n{GREEN}🚀 INICIANDO INTERFAZ GRÁFICA:{RESET}")
+    print(f"{CYAN}🖼️  Cargando Sistema de Matrículas - Modo Visual{RESET}")
     
-    while True:
-        try:
-            choice = input(f"\n{YELLOW}Seleccione el modo de ejecución (1-2): {RESET}").strip()
-            
-            if choice in ['1', '2']:
-                return choice
-            else:
-                print(f"{RED}❌ Opción inválida. Seleccione 1 o 2.{RESET}")
-                
-        except KeyboardInterrupt:
-            print(f"\n\n{YELLOW}👋 Saliendo del programa...{RESET}")
-            sys.exit(0)
-        except Exception as e:
-            print(f"{RED}❌ Error: {str(e)}{RESET}")
-
-def run_console_with_auth():
-    """Ejecuta la aplicación de consola con autenticación"""
-    try:
-        GREEN = '\033[32m'
-        CYAN = '\033[36m'
-        RED = '\033[31m'
-        RESET = '\033[0m'
-        
-        print(f"\n{CYAN}🖥️  Iniciando aplicación de consola con autenticación...{RESET}")
-        
-        from console_app_with_auth import ConsoleAppWithAuth
-        
-        app = ConsoleAppWithAuth()
-        app.run()
-        
-    except ImportError as e:
-        print(f"{RED}❌ Error importando módulo de consola: {str(e)}{RESET}")
-    except Exception as e:
-        print(f"{RED}❌ Error ejecutando aplicación: {str(e)}{RESET}")
+    return '2'  # Siempre retorna GUI
 
 def run_gui_with_auth():
     """Ejecuta la interfaz gráfica con autenticación"""
@@ -215,16 +179,11 @@ def main():
                 print(f"{YELLOW}👋 Saliendo del programa...{RESET}")
                 return
         
-        # Seleccionar modo de ejecución
+        # Seleccionar modo de ejecución (siempre GUI)
         mode = get_execution_mode()
         
-        # Ejecutar según el modo seleccionado
-        if mode == '1':
-            run_console_with_auth()
-        elif mode == '2':
-            run_gui_with_auth()
-        else:
-            print("❌ Modo de ejecución inválido")
+        # Ejecutar interfaz gráfica
+        run_gui_with_auth()
         
         GREEN = '\033[32m'
         RESET = '\033[0m'
@@ -257,16 +216,13 @@ if __name__ == "__main__":
             print("Sistema de Matrículas Universitarias con Autenticación")
             print("Uso: python main_with_auth.py [opción]")
             print("Opciones:")
-            print("  --console, -c    Ejecutar en modo consola")
-            print("  --gui, -g        Ejecutar en modo GUI")
+            print("  --gui, -g        Ejecutar en modo GUI (por defecto)")
             print("  --version, -v    Mostrar versión")
             print("  --help, -h       Mostrar esta ayuda")
-        elif arg in ['--console', '-c']:
-            run_console_with_auth()
         elif arg in ['--gui', '-g']:
             run_gui_with_auth()
         elif arg in ['--version', '-v']:
-            print("Sistema de Matrículas Universitarias v2.0 con Autenticación")
+            print("Sistema de Matrículas Universitarias v2.0 - Interfaz Gráfica")
             print("Python", sys.version)
         else:
             RED = '\033[31m'
