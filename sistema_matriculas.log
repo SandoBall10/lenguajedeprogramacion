@@ -27,3 +27,7 @@
 2025-07-17 19:53:42,638 - config.database - INFO - Conexión exitosa a MySQL
 2025-07-17 19:53:56,995 - config.database - INFO - Conexión exitosa a MySQL
 2025-07-17 19:58:30,732 - __main__ - INFO - Sistema de Matrículas finalizado correctamente
+2025-07-23 19:31:06,654 - __main__ - INFO - Iniciando Sistema de Matrículas Universitarias con Autenticación
+2025-07-23 19:32:23,720 - __main__ - INFO - Iniciando Sistema de Matrículas Universitarias con Autenticación
+2025-07-23 19:32:25,107 - config.database - INFO - Base de datos y tablas creadas exitosamente
+2025-07-23 19:32:27,080 - config.database - INFO - Conexión exitosa a MySQL
